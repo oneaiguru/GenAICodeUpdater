@@ -1,0 +1,7 @@
+README.md
+setup.py
+llmcodeupdater.egg-info/PKG-INFO
+llmcodeupdater.egg-info/SOURCES.txt
+llmcodeupdater.egg-info/dependency_links.txt
+llmcodeupdater.egg-info/requires.txt
+llmcodeupdater.egg-info/top_level.txt

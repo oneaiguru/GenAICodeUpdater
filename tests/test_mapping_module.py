@@ -2,7 +2,7 @@ import unittest
 import os
 import tempfile
 import shutil
-from UpdateModule import update_files
+from llmcodeupdater.mapping import update_files  # Correct import
 
 class TestUpdateModuleExtended(unittest.TestCase):
     def setUp(self):
@@ -34,4 +34,5 @@ class TestUpdateModuleExtended(unittest.TestCase):
             content = f.read()
             self.assertEqual(content, '# Original LoggerManager code')
 
-unittest.TextTestRunner().run(unittest.makeSuite(TestUpdateModuleExtended))
+if __name__ == '__main__':
+    unittest.TextTestRunner().run(unittest.makeSuite(TestUpdateModuleExtended))

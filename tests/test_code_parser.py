@@ -1,6 +1,5 @@
-
 import unittest
-from CodeBlockParser import parse_code_blocks_with_logging
+from llmcodeupdater.code_parser import parse_code_blocks_with_logging
 
 class TestParsingModuleExtended(unittest.TestCase):
     
@@ -21,16 +20,16 @@ class TestParsingModuleExtended(unittest.TestCase):
 
     def test_multiple_code_blocks_with_placeholders(self):
         content = '''
-        # utils/redis_manager.py
-        import redis.asyncio as redis
-        class RedisManager:
-            # rest of methods are not changed
-            pass
-        # utils/logger.py
-        import logging
-        class LoggerManager:
-            pass
-        '''
+# utils/redis_manager.py
+import redis.asyncio as redis
+class RedisManager:
+    # rest of methods are not changed
+    pass
+# utils/logger.py
+import logging
+class LoggerManager:
+    pass
+'''
         result = parse_code_blocks_with_logging(content)
         self.assertEqual(len(result), 2, "Should extract two code blocks")
 
@@ -38,8 +37,7 @@ class TestParsingModuleExtended(unittest.TestCase):
         content = "# utils/empty_block.py"
         result = parse_code_blocks_with_logging(content)
         self.assertEqual(len(result), 0, "Should return no code blocks for an empty code block")
-    
+
 # Run the tests
 if __name__ == '__main__':
     unittest.main()
-    

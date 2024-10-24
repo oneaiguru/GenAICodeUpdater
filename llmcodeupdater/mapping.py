@@ -1,5 +1,5 @@
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 def update_files(mapped_updates: List[Tuple[str, str]]) -> dict:
     files_updated = 0

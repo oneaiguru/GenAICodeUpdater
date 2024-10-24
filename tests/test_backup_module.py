@@ -1,9 +1,11 @@
-
 import unittest
-import tempfile
 import os
+import tempfile
 import shutil
-from BackupModule import backup_files
+from llmcodeupdater.backup import backup_files  # Ensure 'backup.py' is correctly named
+
+from llmcodeupdater.mapping import update_files  # Update if necessary
+from llmcodeupdater.reporting import ReportGenerator  # Ensure 'reporting.py' is correctly named
 
 class TestBackupModuleWithErrorHandling(unittest.TestCase):
 
@@ -41,9 +43,10 @@ class TestBackupModuleWithErrorHandling(unittest.TestCase):
             relative_path = os.path.relpath(original_file, self.project_root)
             backup_file = os.path.join(self.backup_root, backup_timestamp, relative_path)
             self.assertTrue(os.path.isfile(backup_file))
-            with open(backup_file, 'r') as f:
-                content = f.read()
-                self.assertIn('# Original', content)
+            with open(original_file, 'r') as orig_f, open(backup_file, 'r') as backup_f:
+                original_content = orig_f.read()
+                backup_content = backup_f.read()
+                self.assertIn('# Original', backup_content)
 
     def test_directory_structure_preserved(self):
         count = backup_files(self.file_paths, self.project_root, self.backup_root)
@@ -87,10 +90,9 @@ class TestBackupModuleWithErrorHandling(unittest.TestCase):
 
         with self.assertRaises(PermissionError):
             backup_files(self.file_paths, self.project_root, self.backup_root)
-
+        
         backup_dirs = os.listdir(self.backup_root)
         self.assertEqual(len(backup_dirs), 0)
 
 if __name__ == '__main__':
     unittest.main()
-    

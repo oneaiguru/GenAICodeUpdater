@@ -1,0 +1,8 @@
+Metadata-Version: 2.1
+Name: llmcodeupdater
+Version: 0.1.0
+Summary: A tool for updating code using LLM outputs
+Author: Your Name
+Author-email: your.email@example.com
+Keywords: llm,code,update
+Requires-Python: >=3.7

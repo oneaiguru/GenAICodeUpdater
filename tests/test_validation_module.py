@@ -1,7 +1,6 @@
 import unittest
 import os
-
-from reporting_module import generate_report
+from llmcodeupdater.validation import generate_report
 
 class TestReportingModuleExtended(unittest.TestCase):
     def setUp(self):

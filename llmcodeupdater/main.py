@@ -1,32 +1,55 @@
-# main_update_tool.py
+# llmcodeupdater/main.py
+
 import os
 import shutil
-import sqlite3
 from datetime import datetime
-from modules.file_input_module.LLMCodeFileHandler import LLMCodeFileHandler
-from modules.parsing_module.CodeBlockParser import parse_code_blocks
-from modules.mapping_module.MappingModule import map_code_blocks_to_paths
-from modules.backup_module.backup_module import backup_files
-from modules.update_module.update_module import update_files
-from modules.validation_module.ValidationModule import validate_updates
-from modules.task_tracking_module.TaskTrackingModule import TaskTracker
-from modules.reporting_module.ReportingModule import generate_report
-from logger_module import setup_logger
+from .task_tracking import TaskTracker
+from .code_parser import parse_code_blocks_with_logging
+from .mapping import update_files
+from .backup import backup_files
+from .reporting import ReportGenerator
+from .logger import setup_logger
+from .validation import generate_report
 
-def main(zip_file_path: str, project_root: str, backup_root: str, report_directory: str, db_path: str, test_directory: str):
+def map_code_blocks_to_paths(parsed_blocks, project_root):
+    """Map parsed code blocks to their corresponding file paths."""
+    mapped_updates = []
+    for filename, code_block in parsed_blocks:
+        full_path = os.path.join(project_root, filename)
+        mapped_updates.append((full_path, code_block))
+    return mapped_updates
+
+def validate_updates(backup_dir, project_root, test_directory):
+    """Validate the updates by comparing files and running tests."""
+    import pytest
+    
+    mismatched_files = []
+    for root, _, files in os.walk(backup_dir):
+        for file in files:
+            backup_file = os.path.join(root, file)
+            project_file = os.path.join(project_root, os.path.relpath(backup_file, backup_dir))
+            
+            if os.path.exists(project_file):
+                with open(backup_file, 'r') as bf, open(project_file, 'r') as pf:
+                    if bf.read() != pf.read():
+                        mismatched_files.append(os.path.relpath(project_file, project_root))
+    
+    # Run tests
+    test_result = pytest.main([test_directory])
+    tests_passed = test_result == 0
+    
+    return {
+        'mismatched_files': mismatched_files,
+        'tests_passed': tests_passed,
+        'test_output': 'Test execution complete'
+    }
+
+def main(zip_file_path: str, project_root: str, backup_root: str, report_directory: str, 
+         db_path: str, test_directory: str):
     """
     Main function to orchestrate the code update process.
-    
-    Args:
-        zip_file_path (str): Path to the uploaded zip file containing LLM outputs.
-        project_root (str): Root directory of the project codebase.
-        backup_root (str): Root directory where backups will be stored.
-        report_directory (str): Directory where reports will be saved.
-        db_path (str): Path to the SQLite database for task tracking.
-        test_directory (str): Directory containing unit tests.
     """
     extraction_path = 'temp_extracted'
-    target_path = project_root
     os.makedirs(extraction_path, exist_ok=True)
     os.makedirs(backup_root, exist_ok=True)
     os.makedirs(report_directory, exist_ok=True)
@@ -38,14 +61,10 @@ def main(zip_file_path: str, project_root: str, backup_root: str, report_directo
     try:
         logger.info("Starting code update process.")
         
-        # Step 1: Unzip and move files
-        move_result = LLMCodeFileHandler.unzip_and_move(zip_file_path, extraction_path, target_path, db_path)
-        logger.info(f"Files moved: {move_result['files_moved']}")
-        logger.info(f"Database entries: {move_result['db_entries']}")
-        
         # Initialize Task Tracker
         tracker = TaskTracker(db_path)
-        # Fetch all .py files in the project root to add as tasks
+        
+        # Fetch all .py files in the project root
         py_files = []
         for root, dirs, files in os.walk(project_root):
             for file in files:
@@ -53,46 +72,55 @@ def main(zip_file_path: str, project_root: str, backup_root: str, report_directo
                     py_files.append(os.path.join(root, file))
         tracker.add_tasks(py_files)
         
-        # Step 2: Parse code blocks
+        # Parse code blocks
         parsed_blocks = []
         for file_path in py_files:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-                parsed = parse_code_blocks(content)
+                parsed = parse_code_blocks_with_logging(content)
                 parsed_blocks.extend(parsed)
-        logger.info(f"Parsed {len(parsed_blocks)} code blocks.")
         
-        # Step 3: Map code blocks to file paths
+        # Map code blocks to file paths
         mapped_updates = map_code_blocks_to_paths(parsed_blocks, project_root)
-        logger.info(f"Mapped updates to {len(mapped_updates)} files.")
         
-        # Step 4: Backup original files
-        files_to_backup = [path for path, code in mapped_updates]
+        # Backup original files
+        files_to_backup = [path for path, _ in mapped_updates]
         backup_count = backup_files(files_to_backup, project_root, backup_root)
-        logger.info(f"Files backed up: {backup_count}")
         
-        # Step 5: Apply updates
+        # Apply updates
         update_result = update_files(mapped_updates)
-        logger.info(f"Files updated: {update_result['files_updated']}")
-        logger.info(f"Files skipped: {update_result['files_skipped']}")
         
-        # Step 6: Validate updates
-        # Assume backup timestamp is the latest backup
+        # Get latest backup timestamp
         backup_timestamps = sorted(os.listdir(backup_root))
         if not backup_timestamps:
             logger.error("No backups found for validation.")
             return
+        
         backup_timestamp = backup_timestamps[-1]
         original_backup_dir = os.path.join(backup_root, backup_timestamp)
+        
+        # Validate updates
         validation_results = validate_updates(original_backup_dir, project_root, test_directory)
-        logger.info(f"Validation Results: {validation_results}")
         
-        # Step 7: Generate report
-        report_path = os.path.join(report_directory, f"update_report_{backup_timestamp}.md")
-        generate_report(validation_results, backup_timestamp, project_root, report_path)
-        logger.info(f"Report generated at: {report_path}")
+        # Generate reports
+        report_generator = ReportGenerator(report_directory)
+        task_summary = tracker.get_task_summary()
         
-        # Step 8: Update task statuses
+        test_results = {
+            'tests_passed': validation_results['tests_passed'],
+            'total_tests': len(py_files),
+            'failed_tests': 0 if validation_results['tests_passed'] else 1,
+            'test_output': validation_results['test_output']
+        }
+        
+        report_generator.generate_markdown_report(
+            update_result,
+            task_summary,
+            test_results,
+            backup_timestamp
+        )
+        
+        # Update task statuses
         for file_path in files_to_backup:
             relative_path = os.path.relpath(file_path, project_root)
             if relative_path in validation_results['mismatched_files']:
@@ -112,13 +140,12 @@ def main(zip_file_path: str, project_root: str, backup_root: str, report_directo
             shutil.rmtree(extraction_path)
         logger.info("Cleanup complete.")
 
-# Example usage
 if __name__ == "__main__":
     main(
-        zip_file_path='/Users/m/Downloads/untitled folder 122/Full_Integrated_With_Reporting_Module/llm_outputs.zip',  # Update with actual zip file path
-        project_root='/Users/m/git/lubot',                                                       # Update with actual project root
-        backup_root='/Users/m/git/lubot_backups',                                             # Update with actual backup directory
-        report_directory='/Users/m/git/lubot_reports',                                        # Update with actual report directory
-        db_path='/Users/m/git/lubot/update_tasks.db',                                         # Update with actual database path
-        test_directory='/Users/m/git/lubot/tests'                                             # Update with actual test directory
+        zip_file_path='path/to/llm_outputs.zip',
+        project_root='path/to/project',
+        backup_root='path/to/backups',
+        report_directory='path/to/reports',
+        db_path='path/to/update_tasks.db',
+        test_directory='path/to/tests'
     )

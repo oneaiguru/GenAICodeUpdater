@@ -1,71 +1,75 @@
+# llmcodeupdater/task_tracking.py
 
-from typing import List
-import os
 import sqlite3
-import logging
+from typing import List, Dict, Optional
+from datetime import datetime
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class LLMCodeFileHandler:
-    """
-    A class to handle LLM-generated Python files, allowing for reading and parsing of code blocks,
-    handling multi-file code blocks, and managing logging of file operations.
-    """
-
-    def __init__(self, directory: str, db_path: str):
-        """
-        Initialize the handler with the directory containing the .py files and the path to the database.
-
-        Args:
-            directory (str): The path to the directory containing the Python files.
-            db_path (str): Path to the SQLite database for logging operations.
-        """
-        self.directory = directory
+class TaskTracker:
+    def __init__(self, db_path: str):
+        """Initialize TaskTracker with database path."""
         self.db_path = db_path
-
-    def _log_file_operation(self, file_name: str, status: str) -> None:
-        """
-        Log file operations (e.g., processed, ignored, error) in the database.
-
-        Args:
-            file_name (str): Name of the file being processed.
-            status (str): Status of the operation (e.g., 'processed', 'ignored', 'error').
-        """
+        self._init_db()
+    
+    def _init_db(self) -> None:
+        """Initialize the SQLite database with required table."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO file_logs (file_name, status) VALUES (?, ?)", (file_name, status))
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    file_path TEXT PRIMARY KEY,
+                    status TEXT DEFAULT 'pending',
+                    error_message TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
             conn.commit()
-
-    def process_files(self) -> List[str]:
-        """
-        Process all Python files in the directory, handling multi-file code blocks and logging operations.
-
-        Returns:
-            List[str]: The combined content of valid Python files processed.
-        """
-        processed_content = []
-        
-        for file_name in sorted(os.listdir(self.directory)):
-            # Ignore hidden files (e.g., starting with '.')
-            if file_name.startswith('.'):
-                self._log_file_operation(file_name, 'ignored')
-                continue
-
-            file_path = os.path.join(self.directory, file_name)
-            try:
-                with open(file_path, 'r') as f:
-                    content = f.read()
-                    # Check for simple validity (here we just check for print statements for simplicity)
-                    if 'print' not in content:
-                        raise ValueError(f"Malformed file: {file_name}")
-                    
-                    processed_content.append(content)
-                    self._log_file_operation(file_name, 'processed')
-            except Exception as e:
-                logger.error(f"Error processing file {file_name}: {e}")
-                self._log_file_operation(file_name, 'error')
-
-        return processed_content
     
+    def add_tasks(self, file_paths: List[str]) -> None:
+        """Add new tasks to track."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.executemany(
+                "INSERT OR IGNORE INTO tasks (file_path) VALUES (?)",
+                [(path,) for path in file_paths]
+            )
+            conn.commit()
+    
+    def update_task_status(self, file_path: str, status: str, error_message: Optional[str] = None) -> None:
+        """Update the status of a task."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE tasks 
+                SET status = ?, 
+                    error_message = ?,
+                    updated_at = CURRENT_TIMESTAMP 
+                WHERE file_path = ?
+                """,
+                (status, error_message, file_path)
+            )
+            conn.commit()
+    
+    def get_task_summary(self) -> Dict[str, int]:
+        """Get a summary of task statuses."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                    SUM(CASE WHEN status = 'updated' THEN 1 ELSE 0 END) as updated,
+                    SUM(CASE WHEN status = 'skipped' THEN 1 ELSE 0 END) as skipped,
+                    SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error
+                FROM tasks
+            """)
+            row = cursor.fetchone()
+            
+            return {
+                'total': row[0],
+                'pending': row[1],
+                'updated': row[2],
+                'skipped': row[3],
+                'error': row[4]
+            }
