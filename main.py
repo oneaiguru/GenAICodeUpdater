@@ -1,62 +1,108 @@
+# main.py
 import os
 from datetime import datetime
-from task_tracking import TaskTracker
-from llmcodeupdater.parsing_module.CodeBlockParser import parse_code_blocks_with_logging
-from llmcodeupdater.mapping_module.MappingModule import update_files
-from llmcodeupdater.backup_module.backup_module import backup_files
-from llmcodeupdater.reporting_module.ReportGenerator import ReportGenerator
+import logging
+from llmcodeupdater.task_tracking import TaskTracker
+from llmcodeupdater.code_parser import parse_code_blocks_with_logging
+from llmcodeupdater.mapping import update_files
+from llmcodeupdater.backup import backup_files
+from llmcodeupdater.reporting import ReportGenerator
+from llmcodeupdater.file_encoding_handler import FileEncodingHandler
 
-def main(project_root: str, backup_root: str, report_dir: str, db_path: str):
+def preprocess_files(project_root: str) -> dict:
+    """
+    Preprocess files to ensure UTF-8 encoding.
+    Returns dict with preprocessing results.
+    """
+    handler = FileEncodingHandler()
+    backup_dir = os.path.join(project_root, 'encoding_backups')
+    
+    results = handler.process_directory(
+        directory=project_root,
+        backup_dir=backup_dir
+    )
+    
+    # Log results
+    logging.info(f"Encoding conversion results:")
+    logging.info(f"Successfully converted: {len(results['successful'])} files")
+    logging.info(f"Failed to convert: {len(results['failed'])} files")
+    logging.info(f"Already UTF-8 (skipped): {len(results['skipped'])} files")
+    
+    return results
+
+def main(project_root: str, backup_root: str, report_dir: str, db_path: str, llm_output_file: str):
     """Main function to orchestrate the code update process."""
     
-    # Initialize components
-    task_tracker = TaskTracker(db_path)
-    report_generator = ReportGenerator(report_dir)
+    # Set up logging
+    logging.basicConfig(level=logging.INFO)
+    
+    # Create necessary directories
+    os.makedirs(backup_root, exist_ok=True)
+    os.makedirs(report_dir, exist_ok=True)
     
     try:
-        # 1. Collect all Python files
+        # Initialize components
+        task_tracker = TaskTracker(db_path)
+        report_generator = ReportGenerator(report_dir)
+        
+        # Step 1: Preprocess files for encoding
+        preprocess_results = preprocess_files(project_root)
+        if preprocess_results['failed']:
+            for fail in preprocess_results['failed']:
+                logging.error(f"Failed to convert encoding: {fail['path']}, Error: {fail['error']}")
+        
+        # Step 2: Collect all Python files
         py_files = []
         for root, _, files in os.walk(project_root):
             for file in files:
                 if file.endswith('.py'):
                     py_files.append(os.path.join(root, file))
         
-        # 2. Add tasks to tracker
+        # Step 3: Add tasks to tracker
         task_tracker.add_tasks(py_files)
         
-        # 3. Create backup
+        # Step 4: Create backup
         backup_timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         backup_files(py_files, project_root, backup_root)
         
-        # 4. Process updates
+        # Step 5: Parse LLM output to get code blocks
+        with open(llm_output_file, 'r', encoding='utf-8') as f:
+            llm_content = f.read()
+        
+        code_blocks = parse_code_blocks_with_logging(llm_content)
+        
+        # Step 6: Process updates
         error_files = {}
-        update_count = 0
-        skip_count = 0
+        mapped_updates = []
         
-        for file_path in py_files:
-            try:
-                with open(file_path, 'r') as f:
-                    content = f.read()
-                
-                code_blocks = parse_code_blocks_with_logging(content)
-                if code_blocks:
-                    update_result = update_files([(file_path, block[1]) for block in code_blocks])
-                    update_count += update_result['files_updated']
-                    skip_count += update_result['files_skipped']
-                    
-                    if update_result['files_updated'] > 0:
-                        task_tracker.update_task_status(file_path, 'updated')
-                    else:
-                        task_tracker.update_task_status(file_path, 'skipped')
-                        
-            except Exception as e:
-                error_files[file_path] = str(e)
-                task_tracker.update_task_status(file_path, 'error', str(e))
+        for filename, code_block in code_blocks:
+            full_path = os.path.join(project_root, filename)
+            if os.path.exists(full_path):
+                mapped_updates.append((full_path, code_block))
         
-        # 5. Generate reports
+        
+        update_result = update_files(mapped_updates)
+        
+        print(f"Files updated: {update_result['files_updated']}")
+        print(f"Files skipped: {update_result['files_skipped']}")
+        if update_result.get('errors'):
+            print("Errors encountered:")
+            for file_path, error in update_result['errors'].items():
+                print(f"  {file_path}: {error}")
+        
+        
+        # Step 7: Update task statuses
+        for file_path, _ in mapped_updates:
+            if os.path.exists(file_path):
+                task_tracker.update_task_status(file_path, 'updated')
+            else:
+                error_files[file_path] = "File not found"
+                task_tracker.update_task_status(file_path, 'error', "File not found")
+        
+        # Step 8: Generate reports
         update_summary = {
-            'files_updated': update_count,
-            'files_skipped': skip_count,
+            'files_updated': update_result['files_updated'],
+            'files_skipped': update_result['files_skipped'],
             'error_files': error_files
         }
         
@@ -64,12 +110,11 @@ def main(project_root: str, backup_root: str, report_dir: str, db_path: str):
         
         test_results = {
             'tests_passed': True,  # You would get this from running your tests
-            'total_tests': 0,
+            'total_tests': len(mapped_updates),
             'failed_tests': 0,
-            'test_output': ''
+            'test_output': 'No tests were executed'
         }
         
-        # Generate reports
         markdown_report = report_generator.generate_markdown_report(
             update_summary,
             task_summary,
@@ -86,20 +131,22 @@ def main(project_root: str, backup_root: str, report_dir: str, db_path: str):
         
         if error_files:
             error_report = report_generator.generate_error_report(error_files)
-            print(f"Error report generated: {error_report}")
+            logging.info(f"Error report generated: {error_report}")
         
-        print(f"Update complete!")
-        print(f"Markdown report: {markdown_report}")
-        print(f"JSON report: {json_report}")
+        logging.info("Update complete!")
+        logging.info(f"Markdown report: {markdown_report}")
+        logging.info(f"JSON report: {json_report}")
         
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        logging.error(f"An error occurred: {str(e)}")
+        raise
+
 
 if __name__ == "__main__":
-    # Example usage
     main(
-        project_root="/path/to/your/project",
-        backup_root="/path/to/backups",
-        report_dir="/path/to/reports",
-        db_path="/path/to/tasks.db"
+        project_root='/Users/m/git/lubot',
+        backup_root='/Users/m/backups',
+        report_dir='/Users/m/reports',
+        db_path='/Users/m/tasks.db',
+        llm_output_file='/Users/m/llm_output.txt'
     )

@@ -38,6 +38,15 @@ class LoggerManager:
         result = parse_code_blocks_with_logging(content)
         self.assertEqual(len(result), 0, "Should return no code blocks for an empty code block")
 
+    def test_code_with_markdown_block(self):
+        content = '''
+# utils/example.py
+print('This is a code block')
+'''
+        result = parse_code_blocks_with_logging(content)
+        self.assertEqual(len(result), 1, "Should extract one code block with a filename comment")
+        self.assertEqual(result[0][0], 'utils/example.py', "Filename should match")
+
 # Run the tests
 if __name__ == '__main__':
     unittest.main()
