@@ -168,7 +168,6 @@ class CodeParser:
         }
         
         current_block = None
-        in_code_block = False
         in_markdown_fence = False
         
         for i, line in enumerate(lines):
@@ -191,31 +190,30 @@ class CodeParser:
                     current_block = None
                 continue
             
-            # Look for filename markers when not in a markdown block
-            if not in_markdown_fence:
-                filename = self._extract_filename(line)
-                if filename:
-                    # If we were building a block, finalize it
-                    if current_block:
-                        current_block['end_line'] = i
-                        block = self._finalize_block(current_block, lines)
-                        if block.is_complete and block.line_count >= self.min_lines and block.has_imports:
-                            blocks['update'].append(block)
-                        else:
-                            blocks['manual_update'].append(block)
-                            self._handle_small_block(block)
-                    
-                    # Start new block
-                    current_block = {
-                        'filename': filename,
-                        'content': '',
-                        'start_line': i + 1,
-                        'end_line': None
-                    }
-                    continue
+            # Look for filename markers
+            filename = self._extract_filename(line)
+            if filename:
+                # If we were building a block, finalize it before starting new one
+                if current_block:
+                    current_block['end_line'] = i - 1  # End at previous line
+                    block = self._finalize_block(current_block, lines)
+                    if block.is_complete and block.line_count >= self.min_lines and block.has_imports:
+                        blocks['update'].append(block)
+                    else:
+                        blocks['manual_update'].append(block)
+                        self._handle_small_block(block)
+                
+                # Start new block
+                current_block = {
+                    'filename': filename,
+                    'content': '',
+                    'start_line': i + 1,
+                    'end_line': None
+                }
+                continue
             
-            # Add content to current block
-            if current_block is not None and not (in_markdown_fence and stripped_line.startswith('```')):
+            # Add content to current block if we have one
+            if current_block is not None:
                 current_block['content'] += line + '\n'
         
         # Handle any remaining block
@@ -245,3 +243,4 @@ class CodeParser:
             )
         except Exception as e:
             logger.error(f"Error copying to clipboard: {e}")
+
