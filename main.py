@@ -92,7 +92,8 @@ def main():
         
         # Collect and backup files
         py_files = collect_python_files(project_root, ignore_handler)
-        task_tracker.add_tasks([os.path.basename(f) for f in py_files])
+        # Convert PosixPath to string before passing to add_tasks
+        task_tracker.add_tasks([str(os.path.basename(f)) for f in py_files], str(project_root))
         
         backup_timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         files_backed_up = backup_files(py_files, project_root, backup_root)
@@ -118,7 +119,7 @@ def main():
             'error_files': update_result.get('errors', {})
         }
         
-        task_summary = task_tracker.get_task_summary()
+        task_summary = task_tracker.get_task_summary(project_root)
         test_results = {
             'tests_passed': True,
             'total_tests': len(code_blocks),

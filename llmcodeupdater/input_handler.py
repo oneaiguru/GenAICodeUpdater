@@ -3,9 +3,11 @@
 import os
 import pyperclip
 import inquirer
+import json
 from typing import Optional, Dict, Union
 from pathlib import Path
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +17,7 @@ class InputHandler:
     def __init__(self, default_git_path: str = "~/git"):
         """Initialize with default git projects path."""
         self.git_path = os.path.expanduser(default_git_path)
+        self._performance_metrics = {}  # Added performance metrics attribute
     
     def get_git_projects(self) -> list[str]:
         """Get list of git projects in the default directory."""
@@ -69,15 +72,23 @@ class InputHandler:
             logger.error(f"Error validating path: {e}")
             return None
     
+    def get_projects(self) -> list[dict]:
+        """Get list of projects from VS Code configuration."""
+        try:
+            config_path = os.path.expanduser('~/.vscode/projects.json')
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    projects_data = json.load(f)
+                    return [p for p in projects_data if p.get('enabled', True)]
+            return []
+        except Exception as e:
+            logger.error(f"Error loading VS Code projects: {e}")
+            return []
+    
     def process_input(self, args: Dict) -> Dict[str, Union[str, Path, None]]:
-        """
-        Process input from various sources based on provided arguments.
+        """Process input from various sources based on provided arguments."""
+        start_time = time.time()  # Start timing the process
         
-        Returns:
-            Dict containing:
-                - project_path: Selected project path
-                - llm_content: LLM output content
-        """
         result = {
             'project_path': None,
             'llm_content': None
@@ -100,6 +111,7 @@ class InputHandler:
         elif args.get('use_clipboard', False):
             result['llm_content'] = self.get_clipboard_content()
         
+        self._performance_metrics['process_input'] = time.time() - start_time  # Record performance metric
         return result
 
 def setup_cli_parser():

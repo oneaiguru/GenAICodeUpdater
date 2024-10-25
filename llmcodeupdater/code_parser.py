@@ -12,18 +12,49 @@ logger = logging.getLogger(__name__)
 
 def parse_code_blocks_with_logging(content: str) -> List[Tuple[str, str]]:
     """
-    Legacy wrapper function that returns a list of (filename, content) tuples.
-    This maintains compatibility with existing code.
+    Parse code blocks from LLM output content with logging.
+    Returns a list of tuples (filename, code_content).
     """
-    parser = CodeParser()
-    blocks = parser.parse_code_blocks(content)
-    # Convert the blocks dictionary to the expected format
-    result = []
-    for block in blocks['update']:
-        if block.is_complete and block.filename:
-            result.append((block.filename, block.content))
-    logger.info(f"Processed {len(result)} complete code blocks")
-    return result
+    if not content:
+        logger.error("Empty content provided to parser")
+        return []
+
+    # Regular expression to match code blocks with filenames
+    # Matches both Markdown-style blocks and custom format blocks
+    patterns = [
+        # Match ```python filename.py\n...``` style blocks
+        r'```python\s+([^\n]+\.py)\n(.*?)```',
+        # Match ########## filename.py ########## style blocks
+        r'##########\s*([^\n]+\.py)\s*##########\n(.*?)(?=##########|\Z)',
+        # Match additional common formats if needed
+        r'File:\s*([^\n]+\.py)\n```python\n(.*?)```'
+    ]
+
+    code_blocks = []
+    for pattern in patterns:
+        matches = re.finditer(pattern, content, re.DOTALL | re.MULTILINE)
+        for match in matches:
+            filename = match.group(1).strip()
+            code_content = match.group(2).strip()
+            
+            # Basic validation
+            if not filename.endswith('.py'):
+                logger.warning(f"Skipping non-Python file: {filename}")
+                continue
+                
+            if not code_content:
+                logger.warning(f"Empty code block found for {filename}")
+                continue
+
+            logger.info(f"Found code block for file: {filename}")
+            code_blocks.append((filename, code_content))
+
+    if not code_blocks:
+        logger.warning("No valid code blocks found in content")
+    else:
+        logger.info(f"Successfully parsed {len(code_blocks)} code blocks")
+
+    return code_blocks
 
 class CodeParser:
     """Parser for extracting and processing code blocks from LLM output"""

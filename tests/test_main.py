@@ -152,5 +152,49 @@ class TestMainFunctionality(unittest.TestCase):
                 "An error occurred during the update process: No valid code blocks to process"
             )
 
+    @patch('main.os.makedirs')
+    @patch('main.FileEncodingHandler')
+    @patch('main.update_files')
+    @patch('main.backup_files')
+    @patch('main.TaskTracker')
+    @patch('main.ReportGenerator')
+    @patch('main.setup_cli_parser')
+    @patch('main.parse_code_blocks_with_logging')
+    def test_main_with_project_handling(self, mock_parse_blocks, mock_parser, 
+                                      mock_report_gen, mock_task_tracker, 
+                                      mock_backup, mock_update, mock_file_handler, 
+                                      mock_makedirs):
+        # Setup mocks
+        mock_args = Mock()
+        mock_args.git_path = "dummy/path"
+        mock_parser.return_value.parse_args.return_value = mock_args
+        
+        project_path = "/test/project"
+        mock_input_handler = Mock()
+        mock_input_handler.process_input.return_value = {
+            'project_path': project_path,
+            'llm_content': 'some content'
+        }
+        
+        # Setup TaskTracker mock
+        mock_task_tracker_instance = Mock()
+        mock_task_tracker.return_value = mock_task_tracker_instance
+        mock_task_tracker_instance.get_task_summary.return_value = {
+            'total': 5, 'updated': 5, 'skipped': 0, 'error': 0, 'pending': 0
+        }
+        
+        # Setup mock for parse_code_blocks_with_logging
+        mock_parse_blocks.return_value = [('test.py', 'def test(): pass')]
+        
+        # Setup mock for update_files
+        mock_update.return_value = {'files_updated': 5, 'files_skipped': 0, 'errors': {}}
+        
+        with patch('main.InputHandler', return_value=mock_input_handler):
+            main.main()
+            
+            # Verify that add_tasks was called instead of clear_project_tasks
+            mock_task_tracker_instance.add_tasks.assert_called_once()
+            mock_task_tracker_instance.get_task_summary.assert_called_once()
+
 if __name__ == '__main__':
     unittest.main()
