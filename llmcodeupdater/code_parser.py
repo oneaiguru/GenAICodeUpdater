@@ -34,7 +34,8 @@ def parse_code_blocks_with_logging(content: str) -> List[Tuple[str, str]]:
     for pattern in patterns:
         matches = re.finditer(pattern, content, re.DOTALL | re.MULTILINE)
         for match in matches:
-            filename = match.group(1).strip()
+            # Clean filename by removing leading #, //, and whitespace
+            filename = re.sub(r'^[#/\s]+', '', match.group(1).strip())
             code_content = match.group(2).strip()
             
             # Basic validation
@@ -48,7 +49,6 @@ def parse_code_blocks_with_logging(content: str) -> List[Tuple[str, str]]:
 
             logger.info(f"Found code block for file: {filename}")
             code_blocks.append((filename, code_content))
-
     if not code_blocks:
         logger.warning("No valid code blocks found in content")
     else:
@@ -66,8 +66,7 @@ class CodeParser:
         
         # Patterns for different comment styles and filenames
         self.filename_patterns = [
-            r'^\s*#\s*([\w/.-]+\.py)\s*$',      # Python style comments
-            r'^\s*//\s*([\w/.-]+\.py)\s*$',     # C-style comments
+            r'^\s*[#/]+\s*([\w/.-]+\.py)\s*$',  # Python/C-style comments with multiple #/
             r'^\s*([\w/.-]+\.py)\s*$',          # Bare filename
             r'^\s*""".*?([\w/.-]+\.py).*?"""',  # Docstring mentions
             r'^\s*Updated?\s*["`\']([\w/.-]+\.py)["`\']'  # Update references
@@ -88,7 +87,10 @@ class CodeParser:
         for pattern in self.filename_patterns:
             match = re.search(pattern, line)
             if match:
-                return match.group(1)
+                # Strip any leading/trailing whitespace and remove any leading '#' or '//'
+                filename = match.group(1).strip()
+                filename = re.sub(r'^[#/\s]+', '', filename)
+                return filename
         return None
 
     def _is_incomplete_block(self, content: str) -> bool:

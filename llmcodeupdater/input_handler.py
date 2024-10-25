@@ -33,16 +33,19 @@ class InputHandler:
     
     def select_project_interactive(self) -> Optional[str]:
         """Show interactive project selection dialog."""
-        projects = self.get_git_projects()
+        projects = self.get_git_projects()  # Use git projects instead of VS Code projects
         if not projects:
-            logger.warning(f"No git projects found in {self.git_path}")
+            logger.warning("No projects found.")
             return None
-            
+
+        # Create list of project paths for selection
         questions = [
-            inquirer.List('project',
-                         message="Select project to update",
-                         choices=projects,
-                         carousel=True)
+            inquirer.List(
+                'project',
+                message="Select a project to update",
+                choices=projects,
+                carousel=True
+            )
         ]
         
         try:
@@ -73,14 +76,28 @@ class InputHandler:
             return None
     
     def get_projects(self) -> list[dict]:
-        """Get list of projects from VS Code configuration."""
+        """Get list of projects from the VS Code configuration."""
         try:
-            config_path = os.path.expanduser('~/.vscode/projects.json')
-            if os.path.exists(config_path):
-                with open(config_path, 'r') as f:
-                    projects_data = json.load(f)
-                    return [p for p in projects_data if p.get('enabled', True)]
-            return []
+            config_path = os.path.expanduser('~/.config/Code/User/globalStorage/alefragnani.project-manager/projects.json')
+            
+            # Ensure path exists
+            if not os.path.exists(config_path):
+                logger.warning(f"Configuration path not found: {config_path}")
+                return []
+            
+            # Load the JSON file and parse projects
+            with open(config_path, 'r') as f:
+                projects_data = json.load(f)
+            
+            # Extract enabled projects with proper path handling
+            enabled_projects = [
+                {"name": p.get("name", "Unnamed Project"), "path": p.get("path") or p.get("rootPath")}
+                for p in projects_data 
+                if p.get("enabled", True) and (p.get("path") or p.get("rootPath"))
+            ]
+            
+            return enabled_projects
+        
         except Exception as e:
             logger.error(f"Error loading VS Code projects: {e}")
             return []

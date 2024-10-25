@@ -139,14 +139,33 @@ class TestInputHandler(unittest.TestCase):
         config_path = os.path.join(self.temp_dir, '.vscode', 'projects.json')
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         
+        test_projects = [
+            {
+                "name": "Project1",
+                "path": "/path/to/project1",
+                "enabled": True
+            },
+            {
+                "name": "Project2",
+                "rootPath": "/path/to/project2",
+                "enabled": True
+            },
+            {
+                "name": "Project3",
+                "path": "/path/to/project3",
+                "enabled": False
+            }
+        ]
+        
         with open(config_path, 'w') as f:
-            json.dump(self.vscode_projects, f)
+            json.dump(test_projects, f)
             
         with patch('os.path.exists', return_value=True), \
-             patch('builtins.open', mock_open(read_data=json.dumps(self.vscode_projects))):
+             patch('builtins.open', mock_open(read_data=json.dumps(test_projects))):
             projects = self.handler.get_projects()
-            self.assertEqual(len(projects), 1)  # Only enabled projects
-            self.assertEqual(projects[0]['name'], 'Project1')
+            self.assertEqual(len(projects), 2)  # Two enabled projects
+            self.assertEqual(projects[0]['path'], '/path/to/project1')
+            self.assertEqual(projects[1]['path'], '/path/to/project2')
 
 if __name__ == '__main__':
     unittest.main()

@@ -133,6 +133,48 @@ class TestCodeParser(unittest.TestCase):
         result = parse_code_blocks_with_logging(content)
         self.assertEqual(len(result), 0)  # No complete blocks over min_lines
 
+    def test_filename_cleanup(self):
+        """Test that filenames are properly cleaned of prefixes"""
+        content = dedent("""
+            # main.py
+            def test(): pass
+            
+            // utils.py
+            def util(): pass
+            
+            ### helper.py
+            def help(): pass
+        """).strip()
+        
+        blocks = self.parser.parse_code_blocks(content)
+        filenames = {b.filename for b in blocks['manual_update']}
+        self.assertEqual(
+            filenames,
+            {"main.py", "utils.py", "helper.py"}
+        )
+
+    def test_filename_with_hash(self):
+        """Test that # is properly stripped from filenames"""
+        content = "# main.py\ndef main(): pass"
+        blocks = self.parser.parse_code_blocks(content)
+        self.assertEqual(blocks['manual_update'][0].filename, "main.py")
+
+    def test_legacy_wrapper_filename_cleanup(self):
+        """Test that parse_code_blocks_with_logging properly cleans filenames"""
+        content = dedent("""
+            ```python # main.py
+            import os
+            import sys
+            def main():
+                pass
+            ```
+        """).strip()
+        
+        result = parse_code_blocks_with_logging(content)
+        self.assertEqual(len(result), 1)
+        filename, _ = result[0]
+        self.assertEqual(filename, "main.py")
+
 # Separate class for pytest-style tests
 class TestCodeParserPytest:
     @pytest.fixture
