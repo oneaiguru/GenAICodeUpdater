@@ -330,3 +330,203 @@ class TestCodeParserPytest:
         blocks = parser.parse_code_blocks(content)
         assert len(blocks['manual_update']) == 1
         assert blocks['manual_update'][0].is_complete == False
+
+class TestCodeParserMultipleFiles:
+    @pytest.fixture
+    def parser(self):
+        return CodeParser(project_root=None, min_lines=8)
+
+    def test_parse_multiple_files_with_comments(self, parser):
+        """
+        Given LLM output containing multiple Python files
+        When the files are separated by comments
+        Then they should be parsed into separate code blocks
+        """
+        content = dedent("""
+            # main.py
+            import asyncio
+            import logging
+            from pathlib import Path
+            
+            async def main():
+                logger = logging.getLogger()
+                logger.setLevel(logging.INFO)
+                await asyncio.sleep(1)
+                print("Done")
+            
+            if __name__ == "__main__":
+                asyncio.run(main())
+            
+            # utils.py
+            import os
+            import sys
+            from typing import Optional
+            
+            def setup_logging(level: Optional[str] = None):
+                logging.basicConfig(
+                    level=level or "INFO",
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                )
+                return logging.getLogger()
+            
+            def get_config_path():
+                return os.path.join(os.path.dirname(__file__), 'config.json')
+        """).strip()
+
+        result = parser.parse_code_blocks(content)
+        
+        # Both files should be in 'update' as they have imports and >8 lines
+        assert len(result['update']) == 2
+        assert len(result['manual_update']) == 0
+        
+        # Verify main.py
+        main_block = next(b for b in result['update'] if b.filename == 'main.py')
+        assert 'async def main' in main_block.content
+        assert main_block.line_count >= 8
+        assert main_block.has_imports
+        
+        # Verify utils.py
+        utils_block = next(b for b in result['update'] if b.filename == 'utils.py')
+        assert 'def setup_logging' in utils_block.content
+        assert utils_block.line_count >= 8
+        assert utils_block.has_imports
+
+    def test_parse_multiple_files_with_markdown(self, parser):
+        """
+        Given LLM output containing multiple Python files
+        When the files are in markdown code blocks
+        Then they should be parsed into separate code blocks
+        """
+        content = dedent("""
+            Here's the implementation:
+            
+            # main.py
+            ```python
+            import asyncio
+            import logging
+            from datetime import datetime
+            
+            async def process_data():
+                logger = logging.getLogger()
+                start_time = datetime.now()
+                await asyncio.sleep(1)
+                duration = datetime.now() - start_time
+                logger.info(f"Processing took {duration}")
+                return True
+            
+            if __name__ == "__main__":
+                asyncio.run(process_data())
+            ```
+            
+            And here's the helper module:
+            
+            # helpers.py
+            ```python
+            import json
+            import os
+            from pathlib import Path
+            from typing import Dict, Any
+            
+            def load_config() -> Dict[str, Any]:
+                config_path = Path("config.json")
+                if not config_path.exists():
+                    return {}
+                    
+                with open(config_path) as f:
+                    return json.load(f)
+                    
+            def save_config(config: Dict[str, Any]) -> None:
+                with open("config.json", "w") as f:
+                    json.dump(config, f, indent=2)
+            ```
+        """).strip()
+
+        result = parser.parse_code_blocks(content)
+        
+        # Both files should be in 'update' as they have imports and >8 lines
+        assert len(result['update']) == 2
+        assert len(result['manual_update']) == 0
+        
+        # Verify main.py
+        main_block = next(b for b in result['update'] if b.filename == 'main.py')
+        assert 'async def process_data' in main_block.content
+        assert main_block.line_count >= 8
+        assert main_block.has_imports
+        
+        # Verify helpers.py
+        helpers_block = next(b for b in result['update'] if b.filename == 'helpers.py')
+        assert 'def load_config' in helpers_block.content
+        assert helpers_block.line_count >= 8
+        assert helpers_block.has_imports
+
+    def test_parse_mixed_format_files(self, parser):
+        """
+        Given LLM output containing multiple Python files
+        When the files use different formats (comments and markdown)
+        Then they should all be parsed into separate code blocks
+        """
+        content = dedent("""
+            First, update the main file:
+            
+            # main.py
+            ```python
+            import sys
+            import logging
+            from typing import Optional
+            
+            def initialize_app(log_level: Optional[str] = None):
+                logging.basicConfig(level=log_level or "INFO")
+                logger = logging.getLogger()
+                logger.info("Application starting...")
+                return logger
+                
+            if __name__ == "__main__":
+                initialize_app()
+            ```
+            
+            # config.py
+            import json
+            import os
+            from pathlib import Path
+            
+            def read_config():
+                path = Path("config.json")
+                if not path.exists():
+                    return {}
+                    
+                with open(path) as f:
+                    return json.load(f)
+                    
+            def write_config(data):
+                with open("config.json", "w") as f:
+                    json.dump(data, f, indent=2)
+            
+            # small_file.py
+            def too_small():
+                pass
+        """).strip()
+
+        result = parser.parse_code_blocks(content)
+        
+        # main.py and config.py should be in 'update'
+        # small_file.py should be in 'manual_update'
+        assert len(result['update']) == 2
+        assert len(result['manual_update']) == 1
+        
+        # Verify main.py
+        main_block = next(b for b in result['update'] if b.filename == 'main.py')
+        assert 'def initialize_app' in main_block.content
+        assert main_block.line_count >= 8
+        assert main_block.has_imports
+        
+        # Verify config.py
+        config_block = next(b for b in result['update'] if b.filename == 'config.py')
+        assert 'def read_config' in config_block.content
+        assert config_block.line_count >= 8
+        assert config_block.has_imports
+        
+        # Verify small_file.py
+        small_block = next(b for b in result['manual_update'] if b.filename == 'small_file.py')
+        assert 'def too_small' in small_block.content
+        assert small_block.line_count < 8
+
