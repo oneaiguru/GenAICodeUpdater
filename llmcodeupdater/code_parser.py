@@ -1,30 +1,37 @@
-# code_parser.py
 import re
 import os
-from dataclasses import dataclass
-from typing import List, Tuple, Optional
+import pyperclip
+from typing import List, Tuple, Optional, Dict
 import logging
 from pathlib import Path
+from .code_block import CodeBlock
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@dataclass
-class CodeBlock:
-    """Represents a parsed code block with metadata"""
-    filename: str
-    content: str
-    is_complete: bool
-    line_number: int
-    project_path: Optional[str] = None
+def parse_code_blocks_with_logging(content: str) -> List[Tuple[str, str]]:
+    """
+    Legacy wrapper function that returns a list of (filename, content) tuples.
+    This maintains compatibility with existing code.
+    """
+    parser = CodeParser()
+    blocks = parser.parse_code_blocks(content)
+    # Convert the blocks dictionary to the expected format
+    result = []
+    for block in blocks['update']:
+        if block.is_complete and block.filename:
+            result.append((block.filename, block.content))
+    logger.info(f"Processed {len(result)} complete code blocks")
+    return result
 
 class CodeParser:
     """Parser for extracting and processing code blocks from LLM output"""
     
-    def __init__(self, project_root: Optional[str] = None):
+    def __init__(self, project_root: Optional[str] = None, min_lines: int = 8):
         """Initialize parser with optional project root directory"""
         self.project_root = project_root
+        self.min_lines = min_lines
         
         # Patterns for different comment styles and filenames
         self.filename_patterns = [
@@ -44,113 +51,164 @@ class CodeParser:
             r'(?i)original .*(?:code|implementation)',
             r'\.{3,}'  # Ellipsis indicating omitted content
         ]
-    
-    def _is_incomplete_block(self, content: str) -> bool:
-        """Check if a code block contains markers indicating it's incomplete"""
-        return any(re.search(pattern, content, re.MULTILINE) for pattern in self.incomplete_markers)
-    
-    def _find_project_file(self, filename: str) -> Optional[str]:
-        """Find the full path of a file in the project directory"""
-        if not self.project_root:
-            return None
-        
-        file_path = os.path.join(self.project_root, filename)
-        if os.path.exists(file_path):
-            return file_path
-            
-        # Search for the file in project directory if direct path doesn't exist
-        for root, _, files in os.walk(self.project_root):
-            if filename in files:
-                return os.path.join(root, filename)
-        return None
-    
+
     def _extract_filename(self, line: str) -> Optional[str]:
-        """Extract filename from a line of text using various patterns"""
+        """Extract filename from a line using various patterns"""
         for pattern in self.filename_patterns:
-            match = re.match(pattern, line)
+            match = re.search(pattern, line)
             if match:
                 return match.group(1)
         return None
-    
-    def parse_code_blocks(self, content: str) -> List[CodeBlock]:
+
+    def _is_incomplete_block(self, content: str) -> bool:
+        """Check if code block contains markers indicating it's incomplete"""
+        return any(re.search(pattern, content) for pattern in self.incomplete_markers)
+
+    def _has_imports(self, content: str) -> bool:
+        """Check if code block contains import statements"""
+        import_patterns = [
+            r'^\s*import\s+\w+',
+            r'^\s*from\s+[\w.]+\s+import\s+',
+        ]
+        return any(re.search(pattern, content, re.MULTILINE) for pattern in import_patterns)
+
+    def _get_context(self, lines: List[str], block_start: int, block_end: int) -> Tuple[str, str]:
+        """Get 20 lines of context before and after the code block"""
+        context_before = '\n'.join(lines[max(0, block_start - 20):block_start])
+        context_after = '\n'.join(lines[block_end:min(len(lines), block_end + 20)])
+        return context_before, context_after
+
+    def _find_project_file(self, filename: str) -> Optional[str]:
+        """Find full path of file in project directory"""
+        if not self.project_root:
+            return None
+        file_path = os.path.join(self.project_root, filename)
+        return file_path if os.path.exists(file_path) else None
+
+    def _finalize_block(self, block_info: dict, lines: List[str]) -> CodeBlock:
         """
-        Parse code blocks from content, handling multiple formats and patterns
+        Create a CodeBlock instance with all necessary metadata.
+        Improved version that combines functionality from both versions.
+        """
+        content = block_info['content']
+        
+        # Clean up content
+        content_lines = content.split('\n')
+        while content_lines and not content_lines[0].strip():
+            content_lines.pop(0)
+        while content_lines and not content_lines[-1].strip():
+            content_lines.pop(-1)
+        
+        cleaned_content = '\n'.join(content_lines)
+        
+        # Get context
+        context_before, context_after = self._get_context(
+            lines, block_info['start_line'], block_info['end_line']
+        )
+        
+        is_complete = not self._is_incomplete_block(cleaned_content)
+        has_imports = self._has_imports(cleaned_content)
+        line_count = len([l for l in content_lines if l.strip()])
+        project_path = self._find_project_file(block_info['filename'])
+
+        return CodeBlock(
+            filename=block_info['filename'],
+            content=cleaned_content,
+            is_complete=is_complete,
+            line_number=block_info['start_line'],
+            context_before=context_before,
+            context_after=context_after,
+            has_imports=has_imports,
+            line_count=line_count,
+            project_path=project_path
+        )
+
+    def parse_code_blocks(self, content: str) -> Dict[str, List[CodeBlock]]:
+        """
+        Parse code blocks from content, handling multiple formats and patterns.
+        Returns dictionary with two lists: 'update' and 'manual_update'
         """
         lines = content.split('\n')
-        blocks: List[CodeBlock] = []
+        blocks: Dict[str, List[CodeBlock]] = {
+            'update': [],
+            'manual_update': []
+        }
         
-        current_block = []
-        current_filename = None
-        block_start_line = 0
+        current_block = None
         in_code_block = False
+        in_markdown_fence = False
         
-        for i, line in enumerate(lines, 1):
-            # Check for markdown code fence
-            if line.strip().startswith('```'):
-                in_code_block = not in_code_block
+        for i, line in enumerate(lines):
+            stripped_line = line.strip()
+            
+            # Handle markdown code fences
+            if stripped_line.startswith('```'):
+                in_markdown_fence = not in_markdown_fence
+                if not in_markdown_fence and current_block:
+                    # End of markdown block
+                    current_block['end_line'] = i
+                    block = self._finalize_block(current_block, lines)
+                    
+                    if block.is_complete and block.line_count >= self.min_lines and block.has_imports:
+                        blocks['update'].append(block)
+                    else:
+                        blocks['manual_update'].append(block)
+                        self._handle_small_block(block)
+                    
+                    current_block = None
                 continue
             
-            # Skip markdown code block start indicators
-            if line.strip() == 'python':
-                continue
-                
-            # Look for filename markers
-            filename = self._extract_filename(line)
-            if filename:
-                # Save previous block if exists
-                if current_filename and current_block:
-                    block_content = '\n'.join(current_block).strip()
-                    if block_content:  # Only create block if there's content
-                        is_complete = not self._is_incomplete_block(block_content)
-                        project_path = self._find_project_file(current_filename) if self.project_root else None
-                        
-                        blocks.append(CodeBlock(
-                            filename=current_filename,
-                            content=block_content,
-                            is_complete=is_complete,
-                            line_number=block_start_line,
-                            project_path=project_path
-                        ))
-                
-                current_filename = filename
-                current_block = []
-                block_start_line = i
-                continue
+            # Look for filename markers when not in a markdown block
+            if not in_markdown_fence:
+                filename = self._extract_filename(line)
+                if filename:
+                    # If we were building a block, finalize it
+                    if current_block:
+                        current_block['end_line'] = i
+                        block = self._finalize_block(current_block, lines)
+                        if block.is_complete and block.line_count >= self.min_lines and block.has_imports:
+                            blocks['update'].append(block)
+                        else:
+                            blocks['manual_update'].append(block)
+                            self._handle_small_block(block)
+                    
+                    # Start new block
+                    current_block = {
+                        'filename': filename,
+                        'content': '',
+                        'start_line': i + 1,
+                        'end_line': None
+                    }
+                    continue
             
-            # Add non-empty lines to current block if we have a filename
-            if current_filename and line.strip():
-                # Only add lines that aren't markdown fences
-                if not line.strip().startswith('```'):
-                    current_block.append(line)
+            # Add content to current block
+            if current_block is not None and not (in_markdown_fence and stripped_line.startswith('```')):
+                current_block['content'] += line + '\n'
         
-        # Handle final block
-        if current_filename and current_block:
-            block_content = '\n'.join(current_block).strip()
-            if block_content:
-                is_complete = not self._is_incomplete_block(block_content)
-                project_path = self._find_project_file(current_filename) if self.project_root else None
-                
-                blocks.append(CodeBlock(
-                    filename=current_filename,
-                    content=block_content,
-                    is_complete=is_complete,
-                    line_number=block_start_line,
-                    project_path=project_path
-                ))
-        
+        # Handle any remaining block
+        if current_block:
+            current_block['end_line'] = len(lines)
+            block = self._finalize_block(current_block, lines)
+            if block.is_complete and block.line_count >= self.min_lines and block.has_imports:
+                blocks['update'].append(block)
+            else:
+                blocks['manual_update'].append(block)
+                self._handle_small_block(block)
+
         # Log summary
-        complete_blocks = sum(1 for b in blocks if b.is_complete)
-        incomplete_blocks = len(blocks) - complete_blocks
-        
-        logger.info(f"Parsed {len(blocks)} total code blocks:")
-        logger.info(f"- Complete blocks: {complete_blocks}")
-        logger.info(f"- Incomplete blocks: {incomplete_blocks}")
-        logger.info(f"- Blocks with project paths: {sum(1 for b in blocks if b.project_path)}")
+        logger.info(f"Parsed blocks:")
+        logger.info(f"- Auto-update blocks: {len(blocks['update'])}")
+        logger.info(f"- Manual update blocks: {len(blocks['manual_update'])}")
         
         return blocks
 
-def parse_code_blocks_with_logging(file_content: str) -> List[Tuple[str, str]]:
-    """Legacy wrapper for backward compatibility"""
-    parser = CodeParser()
-    blocks = parser.parse_code_blocks(file_content)
-    return [(block.filename, block.content) for block in blocks if block.is_complete]
+    def _handle_small_block(self, block: CodeBlock):
+        """Handle blocks that are too small for automated update"""
+        try:
+            pyperclip.copy(block.to_clipboard_format())
+            logger.info(
+                f"Small code block ({block.line_count} lines) for {block.filename} "
+                f"copied to clipboard with context"
+            )
+        except Exception as e:
+            logger.error(f"Error copying to clipboard: {e}")

@@ -1,0 +1,52 @@
+# .treeignore
+
+# Ignore all files in __pycache__ directories
+__pycache__/
+
+# Ignore .DS_Store files (common on macOS)
+.DS_Store
+.mypy_cache/
+.*
+.*/
+llmcodeupdater.egg-info/
+# Ignore virtual environment directories
+venv/
+myenv/
+
+# Ignore initial data documents
+initial_data/
+
+# Ignore Alembic migration directories
+alembic/
+alembic_multi/
+
+# Ignore documentation
+/docs/
+
+# .selectignore
+.git/
+# Python compiled files
+*.pyc
+.*
+__pycache__/
+
+# Virtual environment
+venv/
+myenv/
+alembic/
+app/
+initial_data/
+tests/
+__init__.py
+*.sh
+*.mako
+*.rdb
+
+alembic_multi/
+# macOS system files
+.DS_Store
+
+# Log files
+*.log
+
+# Add any additional patterns specific to selection

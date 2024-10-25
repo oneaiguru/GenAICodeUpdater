@@ -171,3 +171,20 @@ class FileEncodingHandler:
                         })
         
         return results
+
+    def preprocess_files(self, directory: str, backup_dir: Optional[str] = None) -> Dict[str, list]:
+        """
+        Process all files in a directory, converting them to UTF-8.
+        
+        Args:
+            directory: Directory to process
+            backup_dir: Optional directory to store backups
+        
+        Returns:
+            Dict containing lists of successful and failed files
+        """
+        return self.process_directory(
+            directory=directory,
+            backup_dir=backup_dir,
+            file_extensions=('.py',)
+        )

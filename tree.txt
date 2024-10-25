@@ -1,0 +1,852 @@
+GenAICodeUpdater/
+├── .DS_Store
+├── .gitignore
+├── .mypy_cache/
+│   ├── .gitignore
+│   ├── 3.11/
+│   │   ├── @plugins_snapshot.json
+│   │   ├── __future__.data.json
+│   │   ├── __future__.meta.json
+│   │   ├── _ast.data.json
+│   │   ├── _ast.meta.json
+│   │   ├── _bisect.data.json
+│   │   ├── _bisect.meta.json
+│   │   ├── _codecs.data.json
+│   │   ├── _codecs.meta.json
+│   │   ├── _collections_abc.data.json
+│   │   ├── _collections_abc.meta.json
+│   │   ├── _compression.data.json
+│   │   ├── _compression.meta.json
+│   │   ├── _ctypes.data.json
+│   │   ├── _ctypes.meta.json
+│   │   ├── _decimal.data.json
+│   │   ├── _decimal.meta.json
+│   │   ├── _locale.data.json
+│   │   ├── _locale.meta.json
+│   │   ├── _operator.data.json
+│   │   ├── _operator.meta.json
+│   │   ├── _pytest/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── _argcomplete.data.json
+│   │   │   ├── _argcomplete.meta.json
+│   │   │   ├── _code/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── code.data.json
+│   │   │   │   ├── code.meta.json
+│   │   │   │   ├── source.data.json
+│   │   │   │   └── source.meta.json
+│   │   │   ├── _io/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── saferepr.data.json
+│   │   │   │   ├── saferepr.meta.json
+│   │   │   │   ├── terminalwriter.data.json
+│   │   │   │   ├── terminalwriter.meta.json
+│   │   │   │   ├── wcwidth.data.json
+│   │   │   │   └── wcwidth.meta.json
+│   │   │   ├── _version.data.json
+│   │   │   ├── _version.meta.json
+│   │   │   ├── assertion/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── rewrite.data.json
+│   │   │   │   ├── rewrite.meta.json
+│   │   │   │   ├── truncate.data.json
+│   │   │   │   ├── truncate.meta.json
+│   │   │   │   ├── util.data.json
+│   │   │   │   └── util.meta.json
+│   │   │   ├── cacheprovider.data.json
+│   │   │   ├── cacheprovider.meta.json
+│   │   │   ├── capture.data.json
+│   │   │   ├── capture.meta.json
+│   │   │   ├── compat.data.json
+│   │   │   ├── compat.meta.json
+│   │   │   ├── config/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── argparsing.data.json
+│   │   │   │   ├── argparsing.meta.json
+│   │   │   │   ├── compat.data.json
+│   │   │   │   ├── compat.meta.json
+│   │   │   │   ├── exceptions.data.json
+│   │   │   │   ├── exceptions.meta.json
+│   │   │   │   ├── findpaths.data.json
+│   │   │   │   └── findpaths.meta.json
+│   │   │   ├── debugging.data.json
+│   │   │   ├── debugging.meta.json
+│   │   │   ├── deprecated.data.json
+│   │   │   ├── deprecated.meta.json
+│   │   │   ├── doctest.data.json
+│   │   │   ├── doctest.meta.json
+│   │   │   ├── fixtures.data.json
+│   │   │   ├── fixtures.meta.json
+│   │   │   ├── freeze_support.data.json
+│   │   │   ├── freeze_support.meta.json
+│   │   │   ├── helpconfig.data.json
+│   │   │   ├── helpconfig.meta.json
+│   │   │   ├── hookspec.data.json
+│   │   │   ├── hookspec.meta.json
+│   │   │   ├── legacypath.data.json
+│   │   │   ├── legacypath.meta.json
+│   │   │   ├── logging.data.json
+│   │   │   ├── logging.meta.json
+│   │   │   ├── main.data.json
+│   │   │   ├── main.meta.json
+│   │   │   ├── mark/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── expression.data.json
+│   │   │   │   ├── expression.meta.json
+│   │   │   │   ├── structures.data.json
+│   │   │   │   └── structures.meta.json
+│   │   │   ├── monkeypatch.data.json
+│   │   │   ├── monkeypatch.meta.json
+│   │   │   ├── nodes.data.json
+│   │   │   ├── nodes.meta.json
+│   │   │   ├── outcomes.data.json
+│   │   │   ├── outcomes.meta.json
+│   │   │   ├── pathlib.data.json
+│   │   │   ├── pathlib.meta.json
+│   │   │   ├── pytester.data.json
+│   │   │   ├── pytester.meta.json
+│   │   │   ├── pytester_assertions.data.json
+│   │   │   ├── pytester_assertions.meta.json
+│   │   │   ├── python.data.json
+│   │   │   ├── python.meta.json
+│   │   │   ├── python_api.data.json
+│   │   │   ├── python_api.meta.json
+│   │   │   ├── recwarn.data.json
+│   │   │   ├── recwarn.meta.json
+│   │   │   ├── reports.data.json
+│   │   │   ├── reports.meta.json
+│   │   │   ├── runner.data.json
+│   │   │   ├── runner.meta.json
+│   │   │   ├── scope.data.json
+│   │   │   ├── scope.meta.json
+│   │   │   ├── stash.data.json
+│   │   │   ├── stash.meta.json
+│   │   │   ├── terminal.data.json
+│   │   │   ├── terminal.meta.json
+│   │   │   ├── timing.data.json
+│   │   │   ├── timing.meta.json
+│   │   │   ├── tmpdir.data.json
+│   │   │   ├── tmpdir.meta.json
+│   │   │   ├── warning_types.data.json
+│   │   │   ├── warning_types.meta.json
+│   │   │   ├── warnings.data.json
+│   │   │   └── warnings.meta.json
+│   │   ├── _thread.data.json
+│   │   ├── _thread.meta.json
+│   │   ├── _typeshed/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── importlib.data.json
+│   │   │   └── importlib.meta.json
+│   │   ├── _warnings.data.json
+│   │   ├── _warnings.meta.json
+│   │   ├── _weakref.data.json
+│   │   ├── _weakref.meta.json
+│   │   ├── _weakrefset.data.json
+│   │   ├── _weakrefset.meta.json
+│   │   ├── abc.data.json
+│   │   ├── abc.meta.json
+│   │   ├── argparse.data.json
+│   │   ├── argparse.meta.json
+│   │   ├── array.data.json
+│   │   ├── array.meta.json
+│   │   ├── ast.data.json
+│   │   ├── ast.meta.json
+│   │   ├── atexit.data.json
+│   │   ├── atexit.meta.json
+│   │   ├── backup.data.json
+│   │   ├── backup.meta.json
+│   │   ├── backup_module.data.json
+│   │   ├── backup_module.meta.json
+│   │   ├── bdb.data.json
+│   │   ├── bdb.meta.json
+│   │   ├── bisect.data.json
+│   │   ├── bisect.meta.json
+│   │   ├── builtins.data.json
+│   │   ├── builtins.meta.json
+│   │   ├── bz2.data.json
+│   │   ├── bz2.meta.json
+│   │   ├── chardet/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── big5freq.data.json
+│   │   │   ├── big5freq.meta.json
+│   │   │   ├── big5prober.data.json
+│   │   │   ├── big5prober.meta.json
+│   │   │   ├── chardistribution.data.json
+│   │   │   ├── chardistribution.meta.json
+│   │   │   ├── charsetgroupprober.data.json
+│   │   │   ├── charsetgroupprober.meta.json
+│   │   │   ├── charsetprober.data.json
+│   │   │   ├── charsetprober.meta.json
+│   │   │   ├── codingstatemachine.data.json
+│   │   │   ├── codingstatemachine.meta.json
+│   │   │   ├── codingstatemachinedict.data.json
+│   │   │   ├── codingstatemachinedict.meta.json
+│   │   │   ├── cp949prober.data.json
+│   │   │   ├── cp949prober.meta.json
+│   │   │   ├── enums.data.json
+│   │   │   ├── enums.meta.json
+│   │   │   ├── escprober.data.json
+│   │   │   ├── escprober.meta.json
+│   │   │   ├── escsm.data.json
+│   │   │   ├── escsm.meta.json
+│   │   │   ├── eucjpprober.data.json
+│   │   │   ├── eucjpprober.meta.json
+│   │   │   ├── euckrfreq.data.json
+│   │   │   ├── euckrfreq.meta.json
+│   │   │   ├── euckrprober.data.json
+│   │   │   ├── euckrprober.meta.json
+│   │   │   ├── euctwfreq.data.json
+│   │   │   ├── euctwfreq.meta.json
+│   │   │   ├── euctwprober.data.json
+│   │   │   ├── euctwprober.meta.json
+│   │   │   ├── gb2312freq.data.json
+│   │   │   ├── gb2312freq.meta.json
+│   │   │   ├── gb2312prober.data.json
+│   │   │   ├── gb2312prober.meta.json
+│   │   │   ├── hebrewprober.data.json
+│   │   │   ├── hebrewprober.meta.json
+│   │   │   ├── jisfreq.data.json
+│   │   │   ├── jisfreq.meta.json
+│   │   │   ├── johabfreq.data.json
+│   │   │   ├── johabfreq.meta.json
+│   │   │   ├── johabprober.data.json
+│   │   │   ├── johabprober.meta.json
+│   │   │   ├── jpcntx.data.json
+│   │   │   ├── jpcntx.meta.json
+│   │   │   ├── langbulgarianmodel.data.json
+│   │   │   ├── langbulgarianmodel.meta.json
+│   │   │   ├── langgreekmodel.data.json
+│   │   │   ├── langgreekmodel.meta.json
+│   │   │   ├── langhebrewmodel.data.json
+│   │   │   ├── langhebrewmodel.meta.json
+│   │   │   ├── langrussianmodel.data.json
+│   │   │   ├── langrussianmodel.meta.json
+│   │   │   ├── langthaimodel.data.json
+│   │   │   ├── langthaimodel.meta.json
+│   │   │   ├── langturkishmodel.data.json
+│   │   │   ├── langturkishmodel.meta.json
+│   │   │   ├── latin1prober.data.json
+│   │   │   ├── latin1prober.meta.json
+│   │   │   ├── macromanprober.data.json
+│   │   │   ├── macromanprober.meta.json
+│   │   │   ├── mbcharsetprober.data.json
+│   │   │   ├── mbcharsetprober.meta.json
+│   │   │   ├── mbcsgroupprober.data.json
+│   │   │   ├── mbcsgroupprober.meta.json
+│   │   │   ├── mbcssm.data.json
+│   │   │   ├── mbcssm.meta.json
+│   │   │   ├── resultdict.data.json
+│   │   │   ├── resultdict.meta.json
+│   │   │   ├── sbcharsetprober.data.json
+│   │   │   ├── sbcharsetprober.meta.json
+│   │   │   ├── sbcsgroupprober.data.json
+│   │   │   ├── sbcsgroupprober.meta.json
+│   │   │   ├── sjisprober.data.json
+│   │   │   ├── sjisprober.meta.json
+│   │   │   ├── universaldetector.data.json
+│   │   │   ├── universaldetector.meta.json
+│   │   │   ├── utf1632prober.data.json
+│   │   │   ├── utf1632prober.meta.json
+│   │   │   ├── utf8prober.data.json
+│   │   │   ├── utf8prober.meta.json
+│   │   │   ├── version.data.json
+│   │   │   └── version.meta.json
+│   │   ├── cmd.data.json
+│   │   ├── cmd.meta.json
+│   │   ├── code_block_parser.data.json
+│   │   ├── code_block_parser.meta.json
+│   │   ├── codecs.data.json
+│   │   ├── codecs.meta.json
+│   │   ├── collections/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── abc.data.json
+│   │   │   └── abc.meta.json
+│   │   ├── contextlib.data.json
+│   │   ├── contextlib.meta.json
+│   │   ├── copy.data.json
+│   │   ├── copy.meta.json
+│   │   ├── ctypes/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── _endian.data.json
+│   │   │   └── _endian.meta.json
+│   │   ├── dataclasses.data.json
+│   │   ├── dataclasses.meta.json
+│   │   ├── datetime.data.json
+│   │   ├── datetime.meta.json
+│   │   ├── decimal.data.json
+│   │   ├── decimal.meta.json
+│   │   ├── dis.data.json
+│   │   ├── dis.meta.json
+│   │   ├── doctest.data.json
+│   │   ├── doctest.meta.json
+│   │   ├── email/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── _policybase.data.json
+│   │   │   ├── _policybase.meta.json
+│   │   │   ├── charset.data.json
+│   │   │   ├── charset.meta.json
+│   │   │   ├── contentmanager.data.json
+│   │   │   ├── contentmanager.meta.json
+│   │   │   ├── errors.data.json
+│   │   │   ├── errors.meta.json
+│   │   │   ├── header.data.json
+│   │   │   ├── header.meta.json
+│   │   │   ├── message.data.json
+│   │   │   ├── message.meta.json
+│   │   │   ├── policy.data.json
+│   │   │   └── policy.meta.json
+│   │   ├── enum.data.json
+│   │   ├── enum.meta.json
+│   │   ├── errno.data.json
+│   │   ├── errno.meta.json
+│   │   ├── fnmatch.data.json
+│   │   ├── fnmatch.meta.json
+│   │   ├── functools.data.json
+│   │   ├── functools.meta.json
+│   │   ├── gc.data.json
+│   │   ├── gc.meta.json
+│   │   ├── genericpath.data.json
+│   │   ├── genericpath.meta.json
+│   │   ├── gettext.data.json
+│   │   ├── gettext.meta.json
+│   │   ├── glob.data.json
+│   │   ├── glob.meta.json
+│   │   ├── gzip.data.json
+│   │   ├── gzip.meta.json
+│   │   ├── importlib/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── _abc.data.json
+│   │   │   ├── _abc.meta.json
+│   │   │   ├── abc.data.json
+│   │   │   ├── abc.meta.json
+│   │   │   ├── machinery.data.json
+│   │   │   ├── machinery.meta.json
+│   │   │   ├── metadata/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── _meta.data.json
+│   │   │   │   └── _meta.meta.json
+│   │   │   ├── readers.data.json
+│   │   │   ├── readers.meta.json
+│   │   │   ├── resources/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── abc.data.json
+│   │   │   │   ├── abc.meta.json
+│   │   │   │   ├── readers.data.json
+│   │   │   │   └── readers.meta.json
+│   │   │   ├── util.data.json
+│   │   │   └── util.meta.json
+│   │   ├── iniconfig/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── _parse.data.json
+│   │   │   ├── _parse.meta.json
+│   │   │   ├── exceptions.data.json
+│   │   │   └── exceptions.meta.json
+│   │   ├── inspect.data.json
+│   │   ├── inspect.meta.json
+│   │   ├── io.data.json
+│   │   ├── io.meta.json
+│   │   ├── itertools.data.json
+│   │   ├── itertools.meta.json
+│   │   ├── json/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── decoder.data.json
+│   │   │   ├── decoder.meta.json
+│   │   │   ├── encoder.data.json
+│   │   │   └── encoder.meta.json
+│   │   ├── llmcodeupdater/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── backup.data.json
+│   │   │   ├── backup.meta.json
+│   │   │   ├── backup_module.data.json
+│   │   │   ├── backup_module.meta.json
+│   │   │   ├── code_parser.data.json
+│   │   │   ├── code_parser.meta.json
+│   │   │   ├── encoding_handler.data.json
+│   │   │   ├── encoding_handler.meta.json
+│   │   │   ├── file_encoding_handler.data.json
+│   │   │   ├── file_encoding_handler.meta.json
+│   │   │   ├── input_handler.data.json
+│   │   │   ├── input_handler.meta.json
+│   │   │   ├── logger.data.json
+│   │   │   ├── logger.meta.json
+│   │   │   ├── mapping.data.json
+│   │   │   ├── mapping.meta.json
+│   │   │   ├── mapping_module.data.json
+│   │   │   ├── mapping_module.meta.json
+│   │   │   ├── reporting.data.json
+│   │   │   ├── reporting.meta.json
+│   │   │   ├── reporting_module.data.json
+│   │   │   ├── reporting_module.meta.json
+│   │   │   ├── task_tracking.data.json
+│   │   │   ├── task_tracking.meta.json
+│   │   │   ├── validation.data.json
+│   │   │   ├── validation.meta.json
+│   │   │   ├── validation_module.data.json
+│   │   │   └── validation_module.meta.json
+│   │   ├── llmcodeupdater.data.json
+│   │   ├── llmcodeupdater.meta.json
+│   │   ├── locale.data.json
+│   │   ├── locale.meta.json
+│   │   ├── logger.data.json
+│   │   ├── logger.meta.json
+│   │   ├── logger_module.data.json
+│   │   ├── logger_module.meta.json
+│   │   ├── logging/
+│   │   │   ├── __init__.data.json
+│   │   │   └── __init__.meta.json
+│   │   ├── main.data.json
+│   │   ├── main.meta.json
+│   │   ├── mapping.data.json
+│   │   ├── mapping.meta.json
+│   │   ├── mapping_module.data.json
+│   │   ├── mapping_module.meta.json
+│   │   ├── marshal.data.json
+│   │   ├── marshal.meta.json
+│   │   ├── math.data.json
+│   │   ├── math.meta.json
+│   │   ├── mmap.data.json
+│   │   ├── mmap.meta.json
+│   │   ├── numbers.data.json
+│   │   ├── numbers.meta.json
+│   │   ├── numpy/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── _pytesttester.data.json
+│   │   │   ├── _pytesttester.meta.json
+│   │   │   ├── _typing/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── _add_docstring.data.json
+│   │   │   │   ├── _add_docstring.meta.json
+│   │   │   │   ├── _array_like.data.json
+│   │   │   │   ├── _array_like.meta.json
+│   │   │   │   ├── _callable.data.json
+│   │   │   │   ├── _callable.meta.json
+│   │   │   │   ├── _char_codes.data.json
+│   │   │   │   ├── _char_codes.meta.json
+│   │   │   │   ├── _dtype_like.data.json
+│   │   │   │   ├── _dtype_like.meta.json
+│   │   │   │   ├── _extended_precision.data.json
+│   │   │   │   ├── _extended_precision.meta.json
+│   │   │   │   ├── _generic_alias.data.json
+│   │   │   │   ├── _generic_alias.meta.json
+│   │   │   │   ├── _nbit.data.json
+│   │   │   │   ├── _nbit.meta.json
+│   │   │   │   ├── _nested_sequence.data.json
+│   │   │   │   ├── _nested_sequence.meta.json
+│   │   │   │   ├── _scalars.data.json
+│   │   │   │   ├── _scalars.meta.json
+│   │   │   │   ├── _shape.data.json
+│   │   │   │   ├── _shape.meta.json
+│   │   │   │   ├── _ufunc.data.json
+│   │   │   │   └── _ufunc.meta.json
+│   │   │   ├── _version.data.json
+│   │   │   ├── _version.meta.json
+│   │   │   ├── compat/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── _inspect.data.json
+│   │   │   │   ├── _inspect.meta.json
+│   │   │   │   ├── py3k.data.json
+│   │   │   │   └── py3k.meta.json
+│   │   │   ├── core/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── _asarray.data.json
+│   │   │   │   ├── _asarray.meta.json
+│   │   │   │   ├── _internal.data.json
+│   │   │   │   ├── _internal.meta.json
+│   │   │   │   ├── _type_aliases.data.json
+│   │   │   │   ├── _type_aliases.meta.json
+│   │   │   │   ├── _ufunc_config.data.json
+│   │   │   │   ├── _ufunc_config.meta.json
+│   │   │   │   ├── arrayprint.data.json
+│   │   │   │   ├── arrayprint.meta.json
+│   │   │   │   ├── defchararray.data.json
+│   │   │   │   ├── defchararray.meta.json
+│   │   │   │   ├── einsumfunc.data.json
+│   │   │   │   ├── einsumfunc.meta.json
+│   │   │   │   ├── fromnumeric.data.json
+│   │   │   │   ├── fromnumeric.meta.json
+│   │   │   │   ├── function_base.data.json
+│   │   │   │   ├── function_base.meta.json
+│   │   │   │   ├── multiarray.data.json
+│   │   │   │   ├── multiarray.meta.json
+│   │   │   │   ├── numeric.data.json
+│   │   │   │   ├── numeric.meta.json
+│   │   │   │   ├── numerictypes.data.json
+│   │   │   │   ├── numerictypes.meta.json
+│   │   │   │   ├── overrides.data.json
+│   │   │   │   ├── overrides.meta.json
+│   │   │   │   ├── records.data.json
+│   │   │   │   ├── records.meta.json
+│   │   │   │   ├── shape_base.data.json
+│   │   │   │   ├── shape_base.meta.json
+│   │   │   │   ├── umath.data.json
+│   │   │   │   └── umath.meta.json
+│   │   │   ├── ctypeslib.data.json
+│   │   │   ├── ctypeslib.meta.json
+│   │   │   ├── fft/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── _pocketfft.data.json
+│   │   │   │   ├── _pocketfft.meta.json
+│   │   │   │   ├── helper.data.json
+│   │   │   │   └── helper.meta.json
+│   │   │   ├── lib/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── _version.data.json
+│   │   │   │   ├── _version.meta.json
+│   │   │   │   ├── arraypad.data.json
+│   │   │   │   ├── arraypad.meta.json
+│   │   │   │   ├── arraysetops.data.json
+│   │   │   │   ├── arraysetops.meta.json
+│   │   │   │   ├── arrayterator.data.json
+│   │   │   │   ├── arrayterator.meta.json
+│   │   │   │   ├── format.data.json
+│   │   │   │   ├── format.meta.json
+│   │   │   │   ├── function_base.data.json
+│   │   │   │   ├── function_base.meta.json
+│   │   │   │   ├── histograms.data.json
+│   │   │   │   ├── histograms.meta.json
+│   │   │   │   ├── index_tricks.data.json
+│   │   │   │   ├── index_tricks.meta.json
+│   │   │   │   ├── mixins.data.json
+│   │   │   │   ├── mixins.meta.json
+│   │   │   │   ├── nanfunctions.data.json
+│   │   │   │   ├── nanfunctions.meta.json
+│   │   │   │   ├── npyio.data.json
+│   │   │   │   ├── npyio.meta.json
+│   │   │   │   ├── polynomial.data.json
+│   │   │   │   ├── polynomial.meta.json
+│   │   │   │   ├── scimath.data.json
+│   │   │   │   ├── scimath.meta.json
+│   │   │   │   ├── shape_base.data.json
+│   │   │   │   ├── shape_base.meta.json
+│   │   │   │   ├── stride_tricks.data.json
+│   │   │   │   ├── stride_tricks.meta.json
+│   │   │   │   ├── twodim_base.data.json
+│   │   │   │   ├── twodim_base.meta.json
+│   │   │   │   ├── type_check.data.json
+│   │   │   │   ├── type_check.meta.json
+│   │   │   │   ├── ufunclike.data.json
+│   │   │   │   ├── ufunclike.meta.json
+│   │   │   │   ├── utils.data.json
+│   │   │   │   └── utils.meta.json
+│   │   │   ├── linalg/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── linalg.data.json
+│   │   │   │   └── linalg.meta.json
+│   │   │   ├── ma/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── core.data.json
+│   │   │   │   ├── core.meta.json
+│   │   │   │   ├── extras.data.json
+│   │   │   │   ├── extras.meta.json
+│   │   │   │   ├── mrecords.data.json
+│   │   │   │   └── mrecords.meta.json
+│   │   │   ├── matrixlib/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── defmatrix.data.json
+│   │   │   │   └── defmatrix.meta.json
+│   │   │   ├── polynomial/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── _polybase.data.json
+│   │   │   │   ├── _polybase.meta.json
+│   │   │   │   ├── chebyshev.data.json
+│   │   │   │   ├── chebyshev.meta.json
+│   │   │   │   ├── hermite.data.json
+│   │   │   │   ├── hermite.meta.json
+│   │   │   │   ├── hermite_e.data.json
+│   │   │   │   ├── hermite_e.meta.json
+│   │   │   │   ├── laguerre.data.json
+│   │   │   │   ├── laguerre.meta.json
+│   │   │   │   ├── legendre.data.json
+│   │   │   │   ├── legendre.meta.json
+│   │   │   │   ├── polynomial.data.json
+│   │   │   │   ├── polynomial.meta.json
+│   │   │   │   ├── polyutils.data.json
+│   │   │   │   └── polyutils.meta.json
+│   │   │   ├── random/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   ├── _generator.data.json
+│   │   │   │   ├── _generator.meta.json
+│   │   │   │   ├── _mt19937.data.json
+│   │   │   │   ├── _mt19937.meta.json
+│   │   │   │   ├── _pcg64.data.json
+│   │   │   │   ├── _pcg64.meta.json
+│   │   │   │   ├── _philox.data.json
+│   │   │   │   ├── _philox.meta.json
+│   │   │   │   ├── _sfc64.data.json
+│   │   │   │   ├── _sfc64.meta.json
+│   │   │   │   ├── bit_generator.data.json
+│   │   │   │   ├── bit_generator.meta.json
+│   │   │   │   ├── mtrand.data.json
+│   │   │   │   └── mtrand.meta.json
+│   │   │   ├── testing/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   ├── __init__.meta.json
+│   │   │   │   └── _private/
+│   │   │   │       ├── __init__.data.json
+│   │   │   │       ├── __init__.meta.json
+│   │   │   │       ├── utils.data.json
+│   │   │   │       └── utils.meta.json
+│   │   │   ├── typing/
+│   │   │   │   ├── __init__.data.json
+│   │   │   │   └── __init__.meta.json
+│   │   │   ├── version.data.json
+│   │   │   └── version.meta.json
+│   │   ├── opcode.data.json
+│   │   ├── opcode.meta.json
+│   │   ├── operator.data.json
+│   │   ├── operator.meta.json
+│   │   ├── os/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── path.data.json
+│   │   │   └── path.meta.json
+│   │   ├── packaging/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── _elffile.data.json
+│   │   │   ├── _elffile.meta.json
+│   │   │   ├── _manylinux.data.json
+│   │   │   ├── _manylinux.meta.json
+│   │   │   ├── _musllinux.data.json
+│   │   │   ├── _musllinux.meta.json
+│   │   │   ├── _parser.data.json
+│   │   │   ├── _parser.meta.json
+│   │   │   ├── _structures.data.json
+│   │   │   ├── _structures.meta.json
+│   │   │   ├── _tokenizer.data.json
+│   │   │   ├── _tokenizer.meta.json
+│   │   │   ├── markers.data.json
+│   │   │   ├── markers.meta.json
+│   │   │   ├── requirements.data.json
+│   │   │   ├── requirements.meta.json
+│   │   │   ├── specifiers.data.json
+│   │   │   ├── specifiers.meta.json
+│   │   │   ├── tags.data.json
+│   │   │   ├── tags.meta.json
+│   │   │   ├── utils.data.json
+│   │   │   ├── utils.meta.json
+│   │   │   ├── version.data.json
+│   │   │   └── version.meta.json
+│   │   ├── pathlib.data.json
+│   │   ├── pathlib.meta.json
+│   │   ├── pdb.data.json
+│   │   ├── pdb.meta.json
+│   │   ├── pickle.data.json
+│   │   ├── pickle.meta.json
+│   │   ├── platform.data.json
+│   │   ├── platform.meta.json
+│   │   ├── pluggy/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── _callers.data.json
+│   │   │   ├── _callers.meta.json
+│   │   │   ├── _hooks.data.json
+│   │   │   ├── _hooks.meta.json
+│   │   │   ├── _manager.data.json
+│   │   │   ├── _manager.meta.json
+│   │   │   ├── _result.data.json
+│   │   │   ├── _result.meta.json
+│   │   │   ├── _tracing.data.json
+│   │   │   ├── _tracing.meta.json
+│   │   │   ├── _version.data.json
+│   │   │   └── _version.meta.json
+│   │   ├── posixpath.data.json
+│   │   ├── posixpath.meta.json
+│   │   ├── pprint.data.json
+│   │   ├── pprint.meta.json
+│   │   ├── pytest/
+│   │   │   ├── __init__.data.json
+│   │   │   └── __init__.meta.json
+│   │   ├── re.data.json
+│   │   ├── re.meta.json
+│   │   ├── reporting.data.json
+│   │   ├── reporting.meta.json
+│   │   ├── reporting_module.data.json
+│   │   ├── reporting_module.meta.json
+│   │   ├── reprlib.data.json
+│   │   ├── reprlib.meta.json
+│   │   ├── resource.data.json
+│   │   ├── resource.meta.json
+│   │   ├── setuptests.data.json
+│   │   ├── setuptests.meta.json
+│   │   ├── shlex.data.json
+│   │   ├── shlex.meta.json
+│   │   ├── shutil.data.json
+│   │   ├── shutil.meta.json
+│   │   ├── signal.data.json
+│   │   ├── signal.meta.json
+│   │   ├── sqlite3/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── dbapi2.data.json
+│   │   │   └── dbapi2.meta.json
+│   │   ├── sre_compile.data.json
+│   │   ├── sre_compile.meta.json
+│   │   ├── sre_constants.data.json
+│   │   ├── sre_constants.meta.json
+│   │   ├── sre_parse.data.json
+│   │   ├── sre_parse.meta.json
+│   │   ├── string.data.json
+│   │   ├── string.meta.json
+│   │   ├── struct.data.json
+│   │   ├── struct.meta.json
+│   │   ├── subprocess.data.json
+│   │   ├── subprocess.meta.json
+│   │   ├── sys/
+│   │   │   ├── __init__.data.json
+│   │   │   └── __init__.meta.json
+│   │   ├── sysconfig.data.json
+│   │   ├── sysconfig.meta.json
+│   │   ├── tarfile.data.json
+│   │   ├── tarfile.meta.json
+│   │   ├── task-tracking-module.data.json
+│   │   ├── task-tracking-module.meta.json
+│   │   ├── task_tracking.data.json
+│   │   ├── task_tracking.meta.json
+│   │   ├── tempfile.data.json
+│   │   ├── tempfile.meta.json
+│   │   ├── test_backup_module.data.json
+│   │   ├── test_backup_module.meta.json
+│   │   ├── test_code_parser.data.json
+│   │   ├── test_code_parser.meta.json
+│   │   ├── test_input_handler.data.json
+│   │   ├── test_input_handler.meta.json
+│   │   ├── test_main.data.json
+│   │   ├── test_main.meta.json
+│   │   ├── test_mapping_module.data.json
+│   │   ├── test_mapping_module.meta.json
+│   │   ├── test_reporting_tracking.data.json
+│   │   ├── test_reporting_tracking.meta.json
+│   │   ├── test_task_tracking.data.json
+│   │   ├── test_task_tracking.meta.json
+│   │   ├── test_validation_module.data.json
+│   │   ├── test_validation_module.meta.json
+│   │   ├── textwrap.data.json
+│   │   ├── textwrap.meta.json
+│   │   ├── threading.data.json
+│   │   ├── threading.meta.json
+│   │   ├── time.data.json
+│   │   ├── time.meta.json
+│   │   ├── token.data.json
+│   │   ├── token.meta.json
+│   │   ├── tokenize.data.json
+│   │   ├── tokenize.meta.json
+│   │   ├── traceback.data.json
+│   │   ├── traceback.meta.json
+│   │   ├── types.data.json
+│   │   ├── types.meta.json
+│   │   ├── typing.data.json
+│   │   ├── typing.meta.json
+│   │   ├── typing_extensions.data.json
+│   │   ├── typing_extensions.meta.json
+│   │   ├── unicodedata.data.json
+│   │   ├── unicodedata.meta.json
+│   │   ├── unittest/
+│   │   │   ├── __init__.data.json
+│   │   │   ├── __init__.meta.json
+│   │   │   ├── _log.data.json
+│   │   │   ├── _log.meta.json
+│   │   │   ├── async_case.data.json
+│   │   │   ├── async_case.meta.json
+│   │   │   ├── case.data.json
+│   │   │   ├── case.meta.json
+│   │   │   ├── loader.data.json
+│   │   │   ├── loader.meta.json
+│   │   │   ├── main.data.json
+│   │   │   ├── main.meta.json
+│   │   │   ├── mock.data.json
+│   │   │   ├── mock.meta.json
+│   │   │   ├── result.data.json
+│   │   │   ├── result.meta.json
+│   │   │   ├── runner.data.json
+│   │   │   ├── runner.meta.json
+│   │   │   ├── signals.data.json
+│   │   │   ├── signals.meta.json
+│   │   │   ├── suite.data.json
+│   │   │   └── suite.meta.json
+│   │   ├── uuid.data.json
+│   │   ├── uuid.meta.json
+│   │   ├── validation.data.json
+│   │   ├── validation.meta.json
+│   │   ├── validation_module.data.json
+│   │   ├── validation_module.meta.json
+│   │   ├── warnings.data.json
+│   │   ├── warnings.meta.json
+│   │   ├── weakref.data.json
+│   │   ├── weakref.meta.json
+│   │   ├── zipfile/
+│   │   │   ├── __init__.data.json
+│   │   │   └── __init__.meta.json
+│   │   ├── zlib.data.json
+│   │   └── zlib.meta.json
+│   └── CACHEDIR.TAG
+├── .pytest_cache/
+│   ├── .gitignore
+│   ├── CACHEDIR.TAG
+│   ├── README.md
+│   └── v/
+│       └── cache/
+│           ├── lastfailed
+│           ├── nodeids
+│           └── stepwise
+├── README.md
+├── data/
+│   ├── .DS_Store
+│   └── test_files/
+├── db_path
+├── folder_structure_generator.py
+├── llmcodeupdater/
+│   ├── .DS_Store
+│   ├── __init__.py
+│   ├── backup.py
+│   ├── code_parser.py
+│   ├── file_encoding_handler.py
+│   ├── input_handler.py
+│   ├── logger.py
+│   ├── mapping.py
+│   ├── reporting.py
+│   ├── task_tracking.py
+│   └── validation.py
+├── llmcodeupdater.egg-info/
+│   ├── PKG-INFO
+│   ├── SOURCES.txt
+│   ├── dependency_links.txt
+│   ├── requires.txt
+│   └── top_level.txt
+├── main.py
+├── path/
+│   └── to/
+│       ├── backups/
+│       ├── reports/
+│       └── update_tasks.db
+├── requirements.txt
+├── setup.py
+└── tree.txt
