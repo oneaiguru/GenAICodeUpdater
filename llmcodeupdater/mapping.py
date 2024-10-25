@@ -5,73 +5,154 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-def update_files(mapped_updates: List[Tuple[str, str]]) -> dict:
+def find_file(project_root: str, filename: str) -> str:
     """
-    Updates files with their corresponding code blocks, with improved validation.
+    Searches for a file within the project directory, including subdirectories.
+    If multiple files with the same name exist, returns the first match.
     
     Args:
-        mapped_updates: List of tuples containing file paths and their updated code content
+        project_root (str): The root directory of the project
+        filename (str): Name of the file to find
         
     Returns:
-        dict: Statistics about the update process
+        str: Absolute path to the file if found, empty string otherwise
+    """
+    try:
+        for root, _, files in os.walk(project_root):
+            if filename in files:
+                return os.path.join(root, filename)
+        return ""
+    except Exception as e:
+        logger.error(f"Error searching for file {filename}: {str(e)}")
+        return ""
+
+def is_partial_update(code_block: str) -> bool:
+    """
+    Detects if a code block contains indicators of being a partial update.
+    
+    Args:
+        code_block (str): The code content to check
+        
+    Returns:
+        bool: True if partial update indicators are found, False otherwise
+    """
+    skip_indicators = [
+        'rest of',
+        'do not change',
+        'manual review needed',
+        'unchanged',
+        'remaining code',
+        '...'
+    ]
+    
+    # Convert to lowercase for case-insensitive matching
+    lower_code = code_block.lower()
+    
+    # Check each line for indicators
+    for line in lower_code.split('\n'):
+        stripped = line.strip()
+        # Look for indicators in comments or standalone text
+        if any(indicator in stripped for indicator in skip_indicators):
+            if stripped.startswith('#') or stripped.startswith('//') or stripped.startswith('/*'):
+                return True
+    
+    return False
+
+def update_files(mapped_updates: List[Tuple[str, str]], project_root: str) -> Dict:
+    """
+    Updates files with their corresponding code blocks, handling nested directories
+    and ensuring accurate file mapping.
+    
+    Args:
+        mapped_updates (List[Tuple[str, str]]): List of tuples containing filenames 
+            and their updated code content
+        project_root (str): Root directory of the project
+        
+    Returns:
+        Dict: Statistics about the update process including:
+            - files_updated: number of successfully updated files
+            - files_skipped: number of skipped files
+            - errors: dictionary of errors encountered
+            - unmatched_files: list of files that couldn't be found
     """
     files_updated = 0
     files_skipped = 0
     errors = {}
-    
-    for file_path, code_block in mapped_updates:
+    unmatched_files = []
+    processed_files = set()  # Track processed files to handle duplicates
+
+    for filename, code_block in mapped_updates:
         try:
-            # Normalize path
-            file_path = os.path.normpath(file_path)
+            # Get just the filename if a path is provided
+            base_filename = os.path.basename(filename)
             
-            # More precise partial update detection
-            # Only skip if these indicators appear in comments or as standalone text
-            skip_indicators = [
-                '# rest of',
-                '// rest of',
-                '# do not change',
-                '// do not change',
-                '# manual review needed',
-                '// manual review needed'
-            ]
+            # Search for the file in the project directory
+            file_path = find_file(project_root, base_filename)
             
-            # Check if indicators are present as standalone comments
-            lines = code_block.split('\n')
-            has_skip_indicator = False
-            
-            for line in lines:
-                stripped = line.strip()
-                if any(indicator in stripped for indicator in skip_indicators):
-                    has_skip_indicator = True
-                    break
-            
-            # Skip only if genuine partial update indicators are found
-            if has_skip_indicator:
-                logger.info(f"Skipping {file_path} due to explicit partial update indicators")
+            if not file_path:
+                logger.warning(
+                    f"File '{filename}' not found in project directory"
+                )
+                unmatched_files.append(filename)
                 files_skipped += 1
                 continue
                 
-            # Create directory if it doesn't exist
+            # Skip if this file has already been processed
+            if file_path in processed_files:
+                logger.warning(
+                    f"Duplicate update attempt for '{file_path}'. Using first occurrence only."
+                )
+                files_skipped += 1
+                continue
+                
+            # Check for partial updates
+            if is_partial_update(code_block):
+                logger.info(
+                    f"Skipping '{file_path}' - detected partial update indicators"
+                )
+                files_skipped += 1
+                continue
+                
+            # Ensure directory exists
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             
-            # Write the updated content
+            # Write updated content
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(code_block)
-                files_updated += 1
-                logger.info(f"Successfully updated {file_path}")
                 
+            files_updated += 1
+            processed_files.add(file_path)
+            logger.info(f"Successfully updated '{file_path}'")
+
         except PermissionError as e:
+            error_msg = f"Permission denied: {str(e)}"
+            logger.error(f"Permission error updating '{filename}': {error_msg}")
+            errors[filename] = error_msg
             files_skipped += 1
-            errors[file_path] = f"Permission denied: {str(e)}"
-            logger.error(f"Permission denied when updating {file_path}: {str(e)}")
+            
+        except FileNotFoundError as e:
+            error_msg = f"File not found: {str(e)}"
+            logger.error(f"File not found error updating '{filename}': {error_msg}")
+            errors[filename] = error_msg
+            files_skipped += 1
             
         except Exception as e:
+            error_msg = f"Unexpected error: {str(e)}"
+            logger.error(f"Error updating '{filename}': {error_msg}")
+            errors[filename] = error_msg
             files_skipped += 1
-            errors[file_path] = str(e)
-            logger.error(f"Error updating {file_path}: {str(e)}")
-    
+
+    # Log summary
+    logger.info(f"Update complete: {files_updated} files updated, "
+                f"{files_skipped} files skipped")
+    if unmatched_files:
+        logger.warning(f"Unmatched files: {', '.join(unmatched_files)}")
+    if errors:
+        logger.error(f"Errors encountered: {len(errors)} files")
+
     return {
         'files_updated': files_updated,
         'files_skipped': files_skipped,
-        'errors': errors
+        'errors': errors,
+        'unmatched_files': unmatched_files
     }

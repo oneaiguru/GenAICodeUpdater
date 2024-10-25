@@ -1,4 +1,5 @@
 # main.py
+
 import os
 from datetime import datetime
 import logging
@@ -14,7 +15,7 @@ def preprocess_files(project_root: str) -> dict:
     Preprocess files to ensure UTF-8 encoding.
     Returns dict with preprocessing results.
     """
-    handler = FileEncodingHandler()
+    handler = FileEncodingHandler(logger=logging.getLogger('FileEncodingHandler'))
     backup_dir = os.path.join(project_root, 'encoding_backups')
     
     results = handler.process_directory(
@@ -34,7 +35,11 @@ def main(project_root: str, backup_root: str, report_dir: str, db_path: str, llm
     """Main function to orchestrate the code update process."""
     
     # Set up logging
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger('Main')
     
     # Create necessary directories
     os.makedirs(backup_root, exist_ok=True)
@@ -49,21 +54,24 @@ def main(project_root: str, backup_root: str, report_dir: str, db_path: str, llm
         preprocess_results = preprocess_files(project_root)
         if preprocess_results['failed']:
             for fail in preprocess_results['failed']:
-                logging.error(f"Failed to convert encoding: {fail['path']}, Error: {fail['error']}")
+                logger.error(f"Failed to convert encoding: {fail['path']}, Error: {fail['error']}")
         
         # Step 2: Collect all Python files
         py_files = []
         for root, _, files in os.walk(project_root):
             for file in files:
                 if file.endswith('.py'):
-                    py_files.append(os.path.join(root, file))
+                    py_files.append(file)  # Collect filenames only for mapping
         
         # Step 3: Add tasks to tracker
         task_tracker.add_tasks(py_files)
         
         # Step 4: Create backup
         backup_timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        backup_files(py_files, project_root, backup_root)
+        # Since update_files handles file paths, we pass full paths here
+        full_py_files = [os.path.join(project_root, f) for f in py_files]
+        files_backed_up = backup_files(full_py_files, project_root, backup_root)
+        logger.info(f"Backed up {files_backed_up} files.")
         
         # Step 5: Parse LLM output to get code blocks
         with open(llm_output_file, 'r', encoding='utf-8') as f:
@@ -72,38 +80,37 @@ def main(project_root: str, backup_root: str, report_dir: str, db_path: str, llm
         code_blocks = parse_code_blocks_with_logging(llm_content)
         
         # Step 6: Process updates
-        error_files = {}
+        if not code_blocks:
+            logger.warning("No valid code blocks found in LLM output. Exiting update process.")
+            return
+        
         mapped_updates = []
-        
         for filename, code_block in code_blocks:
-            full_path = os.path.join(project_root, filename)
-            if os.path.exists(full_path):
-                mapped_updates.append((full_path, code_block))
+            mapped_updates.append((filename, code_block))
         
+        update_result = update_files(mapped_updates, project_root)
         
-        update_result = update_files(mapped_updates)
-        
-        print(f"Files updated: {update_result['files_updated']}")
-        print(f"Files skipped: {update_result['files_skipped']}")
+        logger.info(f"Files updated: {update_result['files_updated']}")
+        logger.info(f"Files skipped: {update_result['files_skipped']}")
         if update_result.get('errors'):
-            print("Errors encountered:")
+            logger.error("Errors encountered during file updates:")
             for file_path, error in update_result['errors'].items():
-                print(f"  {file_path}: {error}")
+                logger.error(f"  {file_path}: {error}")
         
+        if update_result.get('unmatched_files'):
+            logger.warning("Unmatched files that were not found in the project directory:")
+            for filename in update_result['unmatched_files']:
+                logger.warning(f"  {filename}")
         
         # Step 7: Update task statuses
-        for file_path, _ in mapped_updates:
-            if os.path.exists(file_path):
-                task_tracker.update_task_status(file_path, 'updated')
-            else:
-                error_files[file_path] = "File not found"
-                task_tracker.update_task_status(file_path, 'error', "File not found")
+        for filename, _ in mapped_updates:
+            task_tracker.update_task_status(filename, 'updated')
         
         # Step 8: Generate reports
         update_summary = {
             'files_updated': update_result['files_updated'],
             'files_skipped': update_result['files_skipped'],
-            'error_files': error_files
+            'error_files': update_result.get('errors', {})
         }
         
         task_summary = task_tracker.get_task_summary()
@@ -112,7 +119,7 @@ def main(project_root: str, backup_root: str, report_dir: str, db_path: str, llm
             'tests_passed': True,  # You would get this from running your tests
             'total_tests': len(mapped_updates),
             'failed_tests': 0,
-            'test_output': 'No tests were executed'
+            'test_output': 'No automated tests were executed'
         }
         
         markdown_report = report_generator.generate_markdown_report(
@@ -129,20 +136,20 @@ def main(project_root: str, backup_root: str, report_dir: str, db_path: str, llm
             backup_timestamp
         )
         
-        if error_files:
-            error_report = report_generator.generate_error_report(error_files)
-            logging.info(f"Error report generated: {error_report}")
+        if update_result.get('errors'):
+            error_report = report_generator.generate_error_report(update_result['errors'])
+            logger.info(f"Error report generated: {error_report}")
         
-        logging.info("Update complete!")
-        logging.info(f"Markdown report: {markdown_report}")
-        logging.info(f"JSON report: {json_report}")
+        logger.info("Update process completed!")
+        logger.info(f"Markdown report: {markdown_report}")
+        logger.info(f"JSON report: {json_report}")
         
     except Exception as e:
-        logging.error(f"An error occurred: {str(e)}")
+        logger.error(f"An error occurred during the update process: {str(e)}")
         raise
 
-
 if __name__ == "__main__":
+    # Example usage with local paths
     main(
         project_root='/Users/m/git/lubot',
         backup_root='/Users/m/backups',
