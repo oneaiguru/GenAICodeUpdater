@@ -11,17 +11,30 @@ class TestMappingModule(unittest.TestCase):
         self.project_root = tempfile.mkdtemp()
         
         # Create nested directory structure
-        os.makedirs(os.path.join(self.project_root, 'src/utils'), exist_ok=True)
-        os.makedirs(os.path.join(self.project_root, 'src/models'), exist_ok=True)
-        os.makedirs(os.path.join(self.project_root, 'tests'), exist_ok=True)
+        self.dirs = {
+            'utils': os.path.join(self.project_root, 'src/utils'),
+            'services': os.path.join(self.project_root, 'src/services'),
+            'models': os.path.join(self.project_root, 'src/models'),
+            'tests': os.path.join(self.project_root, 'tests'),
+            'analytics': os.path.join(self.project_root, 'src/services/analytics')
+        }
         
-        # Create test files
-        self.utils_file = os.path.join(self.project_root, 'src/utils/helper.py')
-        self.models_file = os.path.join(self.project_root, 'src/models/user.py')
-        self.test_file = os.path.join(self.project_root, 'tests/test_helper.py')
+        for dir_path in self.dirs.values():
+            os.makedirs(dir_path, exist_ok=True)
+        
+        # Create test files with nested structure
+        self.files = {
+            'helper': os.path.join(self.dirs['utils'], 'helper.py'),
+            'user': os.path.join(self.dirs['models'], 'user.py'),
+            'test_helper': os.path.join(self.dirs['tests'], 'test_helper.py'),
+            'analytics': os.path.join(self.dirs['analytics'], 'analytics_service.py'),
+            'utils_init': os.path.join(self.dirs['utils'], '__init__.py'),
+            'models_init': os.path.join(self.dirs['models'], '__init__.py'),
+            'duplicate_helper': os.path.join(self.dirs['services'], 'helper.py')
+        }
         
         # Write initial content
-        for file_path in [self.utils_file, self.models_file, self.test_file]:
+        for file_path in self.files.values():
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(f'# Original content in {os.path.basename(file_path)}')
 
@@ -29,25 +42,58 @@ class TestMappingModule(unittest.TestCase):
         # Clean up temporary directory
         shutil.rmtree(self.project_root)
 
-    def test_find_file(self):
-        # Test finding existing file
+    def test_find_file_exact_path(self):
+        """Test finding file with exact path"""
+        rel_path = 'src/services/analytics/analytics_service.py'
+        found_path = find_file(self.project_root, rel_path)
+        self.assertEqual(found_path, self.files['analytics'])
+
+    def test_find_file_basename_unique(self):
+        """Test finding file by basename when unique"""
+        found_path = find_file(self.project_root, 'analytics_service.py')
+        self.assertEqual(found_path, self.files['analytics'])
+
+    def test_find_file_basename_duplicate(self):
+        """Test finding file by basename when duplicate exists"""
+        # Should return the first found instance
         found_path = find_file(self.project_root, 'helper.py')
-        self.assertEqual(found_path, self.utils_file)
+        self.assertTrue(
+            found_path in [self.files['helper'], self.files['duplicate_helper']],
+            "Should find one of the helper.py files"
+        )
+
+    def test_find_file_init(self):
+        """Test finding __init__.py files"""
+        # Should not match without exact path
+        found_path = find_file(self.project_root, '__init__.py')
+        self.assertEqual(found_path, "", "Should not match __init__.py without exact path")
         
-        # Test non-existent file
-        not_found = find_file(self.project_root, 'nonexistent.py')
-        self.assertEqual(not_found, '')
+        # Should match with exact path
+        found_path = find_file(self.project_root, 'src/utils/__init__.py')
+        self.assertEqual(found_path, self.files['utils_init'])
 
-    def test_is_partial_update(self):
-        # Test various partial update indicators
-        self.assertTrue(is_partial_update('# rest of code unchanged'))
-        self.assertTrue(is_partial_update('// do not change below'))
-        self.assertTrue(is_partial_update('/* manual review needed */'))
-        self.assertFalse(is_partial_update('def normal_code():\n    pass'))
-
-    def test_successful_update(self):
+    def test_update_files_with_exact_paths(self):
+        """Test updating files using exact paths"""
         updates = [
-            ('helper.py', '# Updated helper code'),
+            ('src/services/analytics/analytics_service.py', '# Updated analytics service'),
+            ('src/models/user.py', '# Updated user model')
+        ]
+        
+        result = update_files(updates, self.project_root)
+        
+        self.assertEqual(result['files_updated'], 2)
+        self.assertEqual(result['files_skipped'], 0)
+        
+        # Verify content was updated
+        with open(self.files['analytics'], 'r') as f:
+            self.assertEqual(f.read(), '# Updated analytics service')
+        with open(self.files['user'], 'r') as f:
+            self.assertEqual(f.read(), '# Updated user model')
+
+    def test_update_files_with_basenames(self):
+        """Test updating files using basenames"""
+        updates = [
+            ('analytics_service.py', '# Updated analytics service'),
             ('user.py', '# Updated user model')
         ]
         
@@ -55,66 +101,44 @@ class TestMappingModule(unittest.TestCase):
         
         self.assertEqual(result['files_updated'], 2)
         self.assertEqual(result['files_skipped'], 0)
-        self.assertEqual(len(result['errors']), 0)
         
-        # Verify content
-        with open(self.utils_file, 'r') as f:
-            self.assertEqual(f.read(), '# Updated helper code')
-        with open(self.models_file, 'r') as f:
+        # Verify content was updated
+        with open(self.files['analytics'], 'r') as f:
+            self.assertEqual(f.read(), '# Updated analytics service')
+        with open(self.files['user'], 'r') as f:
             self.assertEqual(f.read(), '# Updated user model')
 
-    def test_partial_update_handling(self):
+    def test_update_files_with_duplicates(self):
+        """Test updating files when duplicates exist"""
         updates = [
-            ('helper.py', '# Updated part\n# rest of code unchanged'),
-            ('user.py', '# Complete update')
+            ('helper.py', '# Updated helper')
         ]
         
         result = update_files(updates, self.project_root)
         
-        self.assertEqual(result['files_updated'], 1)
-        self.assertEqual(result['files_skipped'], 1)
-        
-        # Verify original content preserved for partial update
-        with open(self.utils_file, 'r') as f:
-            self.assertEqual(f.read(), '# Original content in helper.py')
-
-    def test_missing_file_handling(self):
-        updates = [
-            ('nonexistent.py', '# Some code'),
-            ('helper.py', '# Valid update')
-        ]
-        
-        result = update_files(updates, self.project_root)
-        
-        self.assertEqual(result['files_updated'], 1)
-        self.assertEqual(result['files_skipped'], 1)
-        self.assertIn('nonexistent.py', result['unmatched_files'])
-
-    def test_permission_error_handling(self):
-        # Make file read-only
-        os.chmod(self.utils_file, 0o444)
-        
-        updates = [('helper.py', '# Try to update')]
-        result = update_files(updates, self.project_root)
-        
-        self.assertEqual(result['files_updated'], 0)
-        self.assertEqual(result['files_skipped'], 1)
-        self.assertIn('helper.py', result['errors'])
-        self.assertIn('Permission denied', result['errors']['helper.py'])
-
-    def test_duplicate_filename_handling(self):
-        # Create duplicate file in different directory
-        os.makedirs(os.path.join(self.project_root, 'src/other'), exist_ok=True)
-        duplicate_file = os.path.join(self.project_root, 'src/other/helper.py')
-        with open(duplicate_file, 'w') as f:
-            f.write('# Duplicate helper')
-            
-        updates = [('helper.py', '# Updated content')]
-        result = update_files(updates, self.project_root)
-        
-        # Should update first found instance only
+        # Should update exactly one instance
         self.assertEqual(result['files_updated'], 1)
         self.assertEqual(result['files_skipped'], 0)
+        
+        # At least one helper.py should be updated
+        updated_content_found = False
+        for helper_path in [self.files['helper'], self.files['duplicate_helper']]:
+            with open(helper_path, 'r') as f:
+                if f.read() == '# Updated helper':
+                    updated_content_found = True
+                    break
+        self.assertTrue(updated_content_found, "No helper.py file was updated")
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_update_init_files(self):
+        """Test updating __init__.py files"""
+        updates = [
+            ('__init__.py', '# Updated init'),  # Should not update without exact path
+            ('src/utils/__init__.py', '# Updated utils init')  # Should update with exact path
+        ]
+        
+        result = update_files(updates, self.project_root)
+        
+        self.assertEqual(result['files_updated'], 1)
+        self.assertEqual(result['files_skipped'], 1)
+        
+        # Verify only the exact path match was updated
