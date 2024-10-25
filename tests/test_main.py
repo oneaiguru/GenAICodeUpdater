@@ -3,11 +3,11 @@ import unittest
 from unittest.mock import patch, Mock, mock_open
 import main
 from llmcodeupdater.code_parser import CodeParser, parse_code_blocks_with_logging
-from llmcodeupdater.file_encoding_handler import FileEncodingHandler  # Update import
+from llmcodeupdater.file_encoding_handler import FileEncodingHandler
 
 class TestMainFunctionality(unittest.TestCase):
     @patch('main.os.makedirs')
-    @patch('main.FileEncodingHandler')  # Update patch
+    @patch('main.FileEncodingHandler')
     @patch('main.update_files')
     @patch('main.backup_files')
     @patch('main.TaskTracker')
@@ -22,13 +22,13 @@ class TestMainFunctionality(unittest.TestCase):
         mock_args.git_path = "dummy/path"
         mock_parser.return_value.parse_args.return_value = mock_args
         
-        # Mock code blocks
+        # Mock code blocks with valid content
         mock_parse_blocks.return_value = [('test.py', 'def test(): pass')]
         
         # Setup mock input handler with proper return values
         mock_input_handler = Mock()
         mock_input_handler.process_input.return_value = {
-            'project_path': '/valid/project/path',  # Must be an absolute path
+            'project_path': '/valid/project/path',
             'llm_content': 'some content'
         }
         
@@ -60,7 +60,7 @@ class TestMainFunctionality(unittest.TestCase):
     @patch('main.update_files', side_effect=Exception("Update failed"))
     @patch('main.os.makedirs')
     @patch('main.parse_code_blocks_with_logging')
-    @patch('main.FileEncodingHandler')  # Add FileEncodingHandler mock
+    @patch('main.FileEncodingHandler')
     def test_main_processing_error(self, mock_file_handler, mock_parse_blocks, 
                              mock_makedirs, mock_update, mock_parser, mock_get_logger):
         # Setup mock parser
@@ -102,6 +102,55 @@ class TestMainFunctionality(unittest.TestCase):
                 mock_logger.error.assert_called_with(
                     "An error occurred during the update process: Update failed"
                 )
+
+    @patch('main.logging.getLogger')
+    @patch('main.setup_cli_parser')
+    @patch('main.os.makedirs')
+    @patch('main.parse_code_blocks_with_logging')
+    @patch('main.FileEncodingHandler')
+    @patch('main.TaskTracker')  # Add TaskTracker mock
+    def test_main_no_valid_code_blocks(self, mock_task_tracker, mock_file_handler, 
+                                 mock_parse_blocks, mock_makedirs, mock_parser, 
+                                 mock_get_logger):
+        # Setup mock parser
+        mock_args = Mock()
+        mock_args.git_path = "dummy/path"
+        mock_parser.return_value.parse_args.return_value = mock_args
+        
+        # Mock FileEncodingHandler
+        mock_file_handler.return_value.preprocess_files.return_value = {
+            'successful': [], 'failed': [], 'skipped': []
+        }
+        
+        # Mock code blocks to return empty list
+        mock_parse_blocks.return_value = []
+        
+        # Setup mock input handler
+        mock_input_handler = Mock()
+        mock_input_handler.process_input.return_value = {
+            'project_path': '/valid/project/path',
+            'llm_content': 'some content'
+        }
+        
+        # Set up the mock logger
+        mock_logger = mock_get_logger.return_value
+        
+        # Mock TaskTracker instance
+        mock_tracker = Mock()
+        mock_task_tracker.return_value = mock_tracker
+        
+        # Patch the InputHandler class
+        with patch('main.InputHandler', return_value=mock_input_handler):
+            # Call main function, expect ValueError
+            with self.assertRaises(ValueError) as context:
+                main.main()
+            
+            # Verify the error messages
+            self.assertEqual(str(context.exception), "No valid code blocks to process")
+            mock_logger.error.assert_any_call("No valid code blocks found in LLM output")
+            mock_logger.error.assert_any_call(
+                "An error occurred during the update process: No valid code blocks to process"
+            )
 
 if __name__ == '__main__':
     unittest.main()

@@ -8,14 +8,20 @@ from llmcodeupdater.mapping import update_files
 from llmcodeupdater.backup import backup_files
 from llmcodeupdater.reporting import ReportGenerator
 from llmcodeupdater.file_encoding_handler import FileEncodingHandler
+from llmcodeupdater.ignore_handler import IgnoreHandler  # Import IgnoreHandler
 
 def validate_prerequisites(project_path: str, llm_content: str) -> bool:
     """Validate required inputs before proceeding."""
+    logger = logging.getLogger('Main')
+    
     if not project_path:
         logging.error("No valid project path provided")
         return False
     if not llm_content:
-        logging.error("No LLM content provided")
+        logger.error("No LLM content provided. Please copy the content to clipboard first.")
+        return False
+    if not llm_content.strip():
+        logger.error("Clipboard content is empty. Please copy valid content first.")
         return False
     return True
 
@@ -30,11 +36,17 @@ def setup_project_directories(project_root: str) -> tuple:
     
     return backup_root, report_dir, db_path
 
-def collect_python_files(project_root: str) -> list:
-    """Collect all Python files in the project."""
+def collect_python_files(project_root: str, ignore_handler: IgnoreHandler) -> list:
+    """Collect all Python files in the project, respecting ignore patterns."""
     py_files = []
     for root, _, files in os.walk(project_root):
+        rel_root = os.path.relpath(root, project_root)
+        if ignore_handler.is_ignored(rel_root):
+            continue
         for file in files:
+            file_rel_path = os.path.join(rel_root, file)
+            if ignore_handler.is_ignored(file_rel_path):
+                continue
             if file.endswith('.py'):
                 py_files.append(os.path.join(root, file))
     return py_files
@@ -64,19 +76,22 @@ def main():
         # Setup directories
         backup_root, report_dir, db_path = setup_project_directories(project_root)
         
+        # Initialize IgnoreHandler
+        ignore_handler = IgnoreHandler(project_root, ignore_files=['.gitignore', '.treeignore', '.selectignore'])
+        
         # Initialize components
         task_tracker = TaskTracker(db_path)
         report_generator = ReportGenerator(report_dir)
         
         # Preprocess files
         file_handler = FileEncodingHandler()
-        preprocess_results = file_handler.preprocess_files(project_root)
+        preprocess_results = file_handler.preprocess_files(project_root, backup_dir=backup_root)
         if preprocess_results['failed']:
             for fail in preprocess_results['failed']:
                 logger.error(f"Failed to convert encoding: {fail['path']}, Error: {fail['error']}")
         
         # Collect and backup files
-        py_files = collect_python_files(project_root)
+        py_files = collect_python_files(project_root, ignore_handler)
         task_tracker.add_tasks([os.path.basename(f) for f in py_files])
         
         backup_timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
