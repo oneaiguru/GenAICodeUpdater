@@ -85,12 +85,14 @@ class TestBackupModuleWithErrorHandling(unittest.TestCase):
         count = backup_files(self.file_paths, self.project_root, self.backup_root)
         self.assertEqual(count, 2)
 
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0,
+                     "Skip permission check when running as root")
     def test_cleanup_on_failure(self):
         os.chmod(self.backup_root, 0o400)
 
         with self.assertRaises(PermissionError):
             backup_files(self.file_paths, self.project_root, self.backup_root)
-        
+
         backup_dirs = os.listdir(self.backup_root)
         self.assertEqual(len(backup_dirs), 0)
 
